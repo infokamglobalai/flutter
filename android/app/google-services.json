@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "711544290730",
+    "project_id": "authenticator-5c78a",
+    "storage_bucket": "authenticator-5c78a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:711544290730:android:f8ad375b009e61c843bfd3",
+        "android_client_info": {
+          "package_name": "com.eduaitutors.userapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlajdA-Zy6uPYe5myS-QgHfSRoCfaPvV4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
