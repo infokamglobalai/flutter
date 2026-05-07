@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/modules/support/controllers/ticket_controller.dart';
+import 'package:file_picker/file_picker.dart';
 
 class RaiseTicketView extends GetView<TicketController> {
   const RaiseTicketView({super.key});
@@ -26,6 +27,8 @@ class RaiseTicketView extends GetView<TicketController> {
             _buildSubjectField(),
             const SizedBox(height: 20),
             _buildDescriptionField(),
+            const SizedBox(height: 20),
+            _buildAttachmentsSection(),
             const SizedBox(height: 20),
             _buildHelpfulTips(),
             const SizedBox(height: 24),
@@ -270,6 +273,123 @@ class RaiseTicketView extends GetView<TicketController> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildAttachmentsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Attachments (optional)',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Attach either up to 3 images OR 1 video.',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final res = await FilePicker.platform.pickFiles(
+                    type: FileType.image,
+                    allowMultiple: true,
+                  );
+                  if (res == null) return;
+                  final paths =
+                      res.files.map((f) => f.path).whereType<String>().toList();
+                  controller.setImages(paths);
+                },
+                icon: const Icon(Icons.image_rounded),
+                label: const Text('Pick images'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final res = await FilePicker.platform.pickFiles(
+                    type: FileType.video,
+                    allowMultiple: false,
+                  );
+                  if (res == null) return;
+                  final path = res.files.first.path;
+                  if (path != null) controller.setVideo(path);
+                },
+                icon: const Icon(Icons.videocam_rounded),
+                label: const Text('Pick video'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Obx(() {
+          final imgs = controller.imagePaths;
+          final vid = controller.videoPath.value;
+          if (imgs.isEmpty && (vid == null || vid.isEmpty)) {
+            return const SizedBox.shrink();
+          }
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Selected',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    TextButton(
+                      onPressed: controller.clearAttachments,
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+                if (vid != null && vid.isNotEmpty)
+                  Text(
+                    'Video: ${vid.split(RegExp(r"[\\\\/]")).last}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                if (imgs.isNotEmpty) ...[
+                  Text(
+                    'Images (${imgs.length}):',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: imgs
+                        .take(3)
+                        .map(
+                          (p) => Chip(
+                            label: Text(p.split(RegExp(r"[\\\\/]")).last),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
       ],
     );
   }

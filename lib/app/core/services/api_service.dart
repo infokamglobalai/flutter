@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart' as dio;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/core/services/storage_service.dart';
@@ -12,11 +13,13 @@ class ApiService {
     // Pre-cache the token once at construction time (synchronous prefs read)
     _cachedToken = _storageService.getTokenSync();
 
+    final baseUrl = _resolveBaseUrl();
     _dio = dio.Dio(
       dio.BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        baseUrl: baseUrl,
+        // AI endpoints (counsellor, chat) can take longer.
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -50,6 +53,17 @@ class ApiService {
         },
       ),
     );
+  }
+
+  String _resolveBaseUrl() {
+    if (kIsWeb) {
+      final host = Uri.base.host.toLowerCase();
+      if (host == 'localhost' || host == '127.0.0.1') {
+        // Local backend (CORS enabled in backend dev)
+        return 'http://localhost:3000/api';
+      }
+    }
+    return ApiConstants.baseUrl;
   }
 
   /// Call this after a successful login to keep the cache fresh.
@@ -92,6 +106,29 @@ class ApiService {
     }
   }
 
+  /// POST request expecting binary (bytes) response.
+  Future<dio.Response<List<int>>> postBytes(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+  }) async {
+    try {
+      final response = await _dio.post<List<int>>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: dio.Options(
+          responseType: dio.ResponseType.bytes,
+          headers: headers,
+        ),
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // PUT request
   Future<dio.Response> put(
     String path, {
@@ -100,6 +137,24 @@ class ApiService {
   }) async {
     try {
       final response = await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // PATCH request
+  Future<dio.Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.patch(
         path,
         data: data,
         queryParameters: queryParameters,

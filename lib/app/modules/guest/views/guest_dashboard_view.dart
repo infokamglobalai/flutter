@@ -32,6 +32,8 @@ class GuestDashboardView extends GetView<GuestDashboardController> {
                 const SizedBox(height: 24),
                 _buildMarketingDocumentsSection(),
                 const SizedBox(height: 24),
+                _buildGuestResourcesSection(),
+                const SizedBox(height: 24),
                 _buildComparisonSection(),
                 const SizedBox(height: 24),
                 _buildRegistrationInterestSection(),
@@ -1532,6 +1534,114 @@ extension on GuestDashboardView {
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestResourcesSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+            'Guest Resources',
+            Icons.public_rounded,
+            'Free resources available for everyone',
+          ),
+          const SizedBox(height: 12),
+          Obx(() {
+            if (controller.isLoadingGuestResources.value) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (controller.guestResourcesError.value.isNotEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red[400]),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        controller.guestResourcesError.value,
+                        style: TextStyle(color: Colors.red[700]),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: controller.loadGuestResources,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final list = controller.guestResources;
+            if (list.isEmpty) {
+              return Text(
+                'No public resources available right now.',
+                style: TextStyle(color: Colors.grey[600]),
+              );
+            }
+
+            return Column(
+              children: list.take(10).map((r) {
+                final title = r['title']?.toString() ??
+                    r['name']?.toString() ??
+                    'Resource';
+                final type = r['type']?.toString() ?? '';
+                final url = r['url']?.toString() ??
+                    r['fileUrl']?.toString() ??
+                    r['link']?.toString() ??
+                    '';
+
+                return Card(
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey[200]!),
+                  ),
+                  child: ListTile(
+                    onTap: url.isEmpty ? null : () => controller.openDocument(url),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        type.toLowerCase().contains('video')
+                            ? Icons.play_circle_outline_rounded
+                            : Icons.picture_as_pdf_rounded,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    title: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: type.isEmpty
+                        ? null
+                        : Text(
+                            type,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                  ),
+                );
+              }).toList(),
+            );
+          }),
         ],
       ),
     );

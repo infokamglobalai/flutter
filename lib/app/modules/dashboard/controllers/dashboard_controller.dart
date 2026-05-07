@@ -10,6 +10,10 @@ import 'package:najahapp/app/data/services/data_service.dart';
 import 'package:najahapp/app/data/services/notification_service.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
 import 'package:najahapp/app/core/services/fcm_service.dart';
+import 'package:najahapp/app/data/utils/student_progress_stats.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
+import 'package:najahapp/app/data/models/banner_model.dart';
+import 'package:image_picker/image_picker.dart';
 
 class DashboardController extends GetxController {
   final SubscriptionRepository _subscriptionRepository =
@@ -51,6 +55,7 @@ class DashboardController extends GetxController {
   final RxString errorMessage = ''.obs;
   final RxBool isGuestMode = false.obs;
   final RxBool isUpdatingProfile = false.obs;
+  final RxBool isUpdatingProfilePicture = false.obs;
 
   // Student Progress
   final Rx<Map<String, dynamic>?> studentProgressData =
@@ -95,6 +100,14 @@ class DashboardController extends GetxController {
   final RxInt notificationCount = 0.obs;
   final RxBool notificationPermissionGranted = false.obs;
 
+  // Top banners (public)
+  final RxList<BannerModel> banners = <BannerModel>[].obs;
+  final RxBool isLoadingBanners = false.obs;
+
+  /// Bottom navigation index on student dashboard (0 Home … 3 Activity).
+  /// Lives on the controller so it is not reset on every [build].
+  final RxInt bottomNavIndex = 0.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -103,6 +116,20 @@ class DashboardController extends GetxController {
     loadUserSubscriptions();
     loadNotificationCount();
     checkNotificationPermission();
+  }
+
+  Future<void> loadPublicBanners() async {
+    try {
+      isLoadingBanners.value = true;
+      final list = await _dataService.fetchPublicBanners();
+      banners.value = list.where((b) => b.isActive).toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+    } catch (e) {
+      // Keep silent; dashboard can work without banners
+      banners.clear();
+    } finally {
+      isLoadingBanners.value = false;
+    }
   }
 
   Future<void> loadUserSubscriptions() async {
@@ -152,6 +179,9 @@ class DashboardController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
+      // Always try to load public banners (works for guest + logged-in)
+      await loadPublicBanners();
+
       // Check if guest mode
       if (_authController == null ||
           _authController!.currentUser.value == null) {
@@ -184,8 +214,11 @@ class DashboardController extends GetxController {
             .getActiveSubscription();
         activeSubscription.value = subscription;
 
-        // Load dashboard statistics
-        await _loadStatistics();
+        // Load dashboard statistics in the background (can be heavy on emulator
+        // and cause UI jank/ANRs when the payload is large).
+        Future<void>(() async {
+          await _loadStatistics();
+        });
       }
     } catch (e) {
       errorMessage.value = e.toString();
@@ -244,14 +277,33 @@ class DashboardController extends GetxController {
   }
 
   Future<void> _loadStatistics() async {
-    // TODO: Implement actual API call to get statistics
-    // Mock data for now
-    completedChapters.value = 12;
-    totalChapters.value = 50;
-    progressPercentage.value =
-        (completedChapters.value / totalChapters.value) * 100;
-    quizzesTaken.value = 8;
-    averageScore.value = 75;
+    final role = user.value?.role.toLowerCase() ?? '';
+    if (role != 'student') {
+      completedChapters.value = 0;
+      totalChapters.value = 0;
+      progressPercentage.value = 0;
+      quizzesTaken.value = 0;
+      averageScore.value = 0;
+      return;
+    }
+
+    try {
+      final raw = await _dataService.fetchStudentProgress();
+      studentProgressData.value = raw;
+      final stats = StudentProgressStats.fromProgressPayload(raw);
+      completedChapters.value = stats.completedChapters;
+      totalChapters.value = stats.totalChapters;
+      progressPercentage.value = stats.chapterVideoProgressPercent;
+      quizzesTaken.value = stats.totalQuizLikeAttempts;
+      averageScore.value = stats.averageScorePercent;
+    } catch (_) {
+      studentProgressData.value = null;
+      completedChapters.value = 0;
+      totalChapters.value = 0;
+      progressPercentage.value = 0;
+      quizzesTaken.value = 0;
+      averageScore.value = 0;
+    }
   }
 
   // Navigation methods
@@ -264,11 +316,11 @@ class DashboardController extends GetxController {
   }
 
   void navigateToProgress() {
-    Get.toNamed('/progress');
+    Get.toNamed(Routes.STUDENT_PROGRESS);
   }
 
   void navigateToProfile() {
-    Get.toNamed('/profile');
+    Get.toNamed(Routes.PROFILE);
   }
 
   // Getters
@@ -390,6 +442,43 @@ class DashboardController extends GetxController {
       );
     } finally {
       isUpdatingProfile.value = false;
+    }
+  }
+
+  Future<void> updateProfilePicture(XFile file) async {
+    try {
+      isUpdatingProfilePicture.value = true;
+      final path = await _authRepository.updateProfilePicture(file);
+      if (path.trim().isEmpty) {
+        throw Exception('Failed to update profile picture');
+      }
+
+      final updated = (user.value ?? _authController?.currentUser.value)
+          ?.copyWith(avatar: path);
+      if (updated != null) {
+        user.value = updated;
+        if (_authController != null) {
+          _authController!.currentUser.value = updated;
+        }
+      }
+
+      Get.snackbar(
+        'Success',
+        'Profile picture updated',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.primary,
+        colorText: Get.theme.colorScheme.onPrimary,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+      );
+    } finally {
+      isUpdatingProfilePicture.value = false;
     }
   }
 }

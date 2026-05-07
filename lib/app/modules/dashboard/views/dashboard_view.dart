@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
-import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
-import 'package:najahapp/app/core/services/storage_service.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
 import 'package:najahapp/app/data/models/subscription_model.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -21,18 +22,41 @@ class _DashboardViewState extends State<DashboardView>
   DashboardController get controller => Get.find<DashboardController>();
   final GlobalKey _subscriptionsKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
+  final PageController _bannerPageController = PageController();
+  Timer? _bannerAutoTimer;
+  int _bannerIndex = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startBannerAutoSlide();
   }
 
   @override
   void dispose() {
+    _bannerAutoTimer?.cancel();
+    _bannerPageController.dispose();
     _scrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _startBannerAutoSlide() {
+    _bannerAutoTimer?.cancel();
+    _bannerAutoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final items = controller.banners;
+      if (items.isEmpty) return;
+      _bannerIndex = (_bannerIndex + 1) % items.length;
+      if (_bannerPageController.hasClients) {
+        _bannerPageController.animateToPage(
+          _bannerIndex,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   @override
@@ -46,16 +70,13 @@ class _DashboardViewState extends State<DashboardView>
 
   @override
   Widget build(BuildContext context) {
-    // Mock data - will come from controller in real app
-    // Toggle this to see guest (false) vs subscribed (true) dashboard
-    final hasSubscriptions = true;
-    final studentName = "Yashwant";
-    final selectedIndex = 0.obs; // For bottom nav
+    return Obx(() {
+      final guest = controller.isGuestMode.value;
+      final tab = controller.bottomNavIndex.value;
 
-    return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
-      body: Obx(
-        () => CustomScrollView(
+      return Scaffold(
+        backgroundColor: AppTheme.primaryColor,
+        body: CustomScrollView(
           controller: _scrollController,
           slivers: [
             _buildAppBar(context),
@@ -70,9 +91,16 @@ class _DashboardViewState extends State<DashboardView>
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: hasSubscriptions
+                  children: guest
                       ? [
-                          // Notification Permission Banner
+                          ..._buildGuestUserSections(context),
+                          const SizedBox(height: 24),
+                          _buildMarketingDocuments(context),
+                          const SizedBox(height: 24),
+                          _buildRegistrationForm(context),
+                          const SizedBox(height: 32),
+                        ]
+                      : [
                           Obx(() {
                             if (!controller
                                 .notificationPermissionGranted
@@ -83,95 +111,83 @@ class _DashboardViewState extends State<DashboardView>
                             }
                             return const SizedBox.shrink();
                           }),
-                          ..._buildSubscribedUserSections(
-                            context,
-                            studentName,
-                            selectedIndex.value,
-                          ),
-                          const SizedBox(height: 24),
-                          _buildMarketingDocuments(context),
+                          ..._buildSubscribedUserSections(context, tab),
                           const SizedBox(height: 100), // Space for bottom nav
-                        ]
-                      : [
-                          ..._buildGuestUserSections(context),
-                          const SizedBox(height: 24),
-                          _buildMarketingDocuments(context),
-                          const SizedBox(height: 24),
-                          _buildRegistrationForm(context),
-                          const SizedBox(height: 32),
                         ],
                 ),
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: hasSubscriptions
-          ? Obx(() => _buildBottomNavigationBar(context, selectedIndex))
-          : null,
-    );
+        bottomNavigationBar:
+            guest ? null : _buildBottomNavigationBar(context),
+      );
+    });
   }
 
-  Widget _buildBottomNavigationBar(BuildContext context, RxInt selectedIndex) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 56,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                index: 0,
-                selectedIndex: selectedIndex,
-                color: AppTheme.primaryColor,
-              ),
-              _buildNavItem(
-                icon: Icons.school_rounded,
-                label: 'Learn',
-                index: 1,
-                selectedIndex: selectedIndex,
-                color: AppTheme.primaryColor,
-              ),
-              _buildNavItem(
-                icon: Icons.support_agent_rounded,
-                label: 'Support',
-                index: 2,
-                selectedIndex: selectedIndex,
-                color: AppTheme.primaryColor,
-              ),
-              _buildNavItem(
-                icon: Icons.analytics_rounded,
-                label: 'Activity',
-                index: 3,
-                selectedIndex: selectedIndex,
-                color: AppTheme.primaryColor,
-              ),
-            ],
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    return Obx(() {
+      final selectedIndex = controller.bottomNavIndex.value;
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 56,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  index: 0,
+                  selectedIndex: selectedIndex,
+                  color: AppTheme.primaryColor,
+                ),
+                _buildNavItem(
+                  icon: Icons.school_rounded,
+                  label: 'Learn',
+                  index: 1,
+                  selectedIndex: selectedIndex,
+                  color: AppTheme.primaryColor,
+                ),
+                _buildNavItem(
+                  icon: Icons.support_agent_rounded,
+                  label: 'Support',
+                  index: 2,
+                  selectedIndex: selectedIndex,
+                  color: AppTheme.primaryColor,
+                ),
+                _buildNavItem(
+                  icon: Icons.analytics_rounded,
+                  label: 'Activity',
+                  index: 3,
+                  selectedIndex: selectedIndex,
+                  color: AppTheme.primaryColor,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildNavItem({
     required IconData icon,
     required String label,
     required int index,
-    required RxInt selectedIndex,
+    required int selectedIndex,
     required Color color,
   }) {
-    final isSelected = selectedIndex.value == index;
+    final isSelected = selectedIndex == index;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          selectedIndex.value = index;
+          controller.bottomNavIndex.value = index;
           HapticFeedback.lightImpact();
         },
         child: Container(
@@ -220,12 +236,11 @@ class _DashboardViewState extends State<DashboardView>
 
   List<Widget> _buildSubscribedUserSections(
     BuildContext context,
-    String studentName,
     int selectedTab,
   ) {
     // Common sections shown on all tabs
     final commonSections = [
-      _buildWelcomeSection(context, studentName),
+      _buildTopBannerSection(context),
       const SizedBox(height: 24),
     ];
 
@@ -235,8 +250,6 @@ class _DashboardViewState extends State<DashboardView>
         return [
           ...commonSections,
           _buildQuickAccessSection(context),
-          const SizedBox(height: 24),
-          _buildPackagesCTA(context),
           const SizedBox(height: 24),
           _buildSubscribedPackages(context),
           const SizedBox(height: 24),
@@ -254,7 +267,13 @@ class _DashboardViewState extends State<DashboardView>
           const SizedBox(height: 16),
           _buildWorksheetsSection(context),
           const SizedBox(height: 16),
+          _buildExercisesSection(context),
+          const SizedBox(height: 16),
           _buildBrainGamesSection(context),
+          const SizedBox(height: 16),
+          _buildReportsSection(context),
+          const SizedBox(height: 16),
+          _buildFreeContentSection(context),
           const SizedBox(height: 24),
           _buildSubscribedPackages(context),
         ];
@@ -269,6 +288,8 @@ class _DashboardViewState extends State<DashboardView>
           _buildCoachingSection(context),
           const SizedBox(height: 16),
           _buildAskQuestionSection(context),
+          const SizedBox(height: 16),
+          _buildAiCounsellorSupportSection(context),
           const SizedBox(height: 16),
           _buildContactSupportSection(context),
         ];
@@ -285,6 +306,180 @@ class _DashboardViewState extends State<DashboardView>
 
       default:
         return commonSections;
+    }
+  }
+
+  Widget _buildTopBannerSection(BuildContext context) {
+    return Obx(() {
+      final banners = controller.banners;
+      if (banners.isEmpty) {
+        return _buildWelcomeSection(context);
+      }
+
+      final screenWidth = MediaQuery.of(context).size.width;
+      final marginH = screenWidth < 360 ? 12.0 : 16.0;
+
+      return Container(
+        margin: EdgeInsets.fromLTRB(marginH, 16, marginH, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                PageView.builder(
+                  controller: _bannerPageController,
+                  onPageChanged: (i) => setState(() => _bannerIndex = i),
+                  itemCount: banners.length,
+                  itemBuilder: (context, index) {
+                    final b = banners[index];
+                    return InkWell(
+                      onTap: () => _handleBannerTap(b.linkType, b.internalRoute,
+                          b.internalParams, b.externalUrl),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            b.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[100],
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          if ((b.title).trim().isNotEmpty ||
+                              (b.description).trim().isNotEmpty)
+                            Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.0),
+                                      Colors.black.withOpacity(0.62),
+                                    ],
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if ((b.title).trim().isNotEmpty)
+                                      Text(
+                                        b.title.trim(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    if ((b.description).trim().isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        b.description.trim(),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.92),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 8,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(banners.length, (i) {
+                      final active = i == _bannerIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        height: 6,
+                        width: active ? 18 : 6,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _handleBannerTap(
+    String linkType,
+    String internalRoute,
+    Map<String, dynamic> internalParams,
+    String externalUrl,
+  ) async {
+    final lt = linkType.toLowerCase().trim();
+    if (lt == 'external') {
+      final url = externalUrl.trim();
+      if (url.isEmpty) return;
+      final uri = Uri.tryParse(url);
+      if (uri == null) return;
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (lt == 'internal') {
+      final r = internalRoute.trim();
+      if (r.isEmpty) return;
+      Get.toNamed(r, arguments: internalParams);
+      return;
     }
   }
 
@@ -529,7 +724,7 @@ class _DashboardViewState extends State<DashboardView>
     }
   }
 
-  Widget _buildWelcomeSection(BuildContext context, String studentName) {
+  Widget _buildWelcomeSection(BuildContext context) {
     // Responsive values
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
@@ -559,57 +754,59 @@ class _DashboardViewState extends State<DashboardView>
             top: cardPadding,
             bottom: cardPadding,
             right: isSmallScreen ? 140 : 160,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Learn anytime &\nanywhere',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 22.0 : 26.0,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1F2937),
-                        height: 1.1,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Learn anytime &\nanywhere',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 22.0 : 26.0,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1F2937),
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: isSmallScreen ? 6 : 8),
-                    Text(
-                      'start learning new skill and\ngrowing your skill.',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 11.0 : 12.0,
-                        color: const Color(0xFF1F2937),
-                        height: 1.3,
+                      SizedBox(height: isSmallScreen ? 6 : 8),
+                      Text(
+                        'start learning new skill and\ngrowing your skill.',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11.0 : 12.0,
+                          color: const Color(0xFF1F2937),
+                          height: 1.3,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                // Arrow Button
-                Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(),
-                  elevation: 0,
-                  child: InkWell(
-                    onTap: _scrollToSubscriptions,
-                    customBorder: const CircleBorder(),
-                    child: Container(
-                      width: isSmallScreen ? 44 : 50,
-                      height: isSmallScreen ? 44 : 50,
-                      padding: const EdgeInsets.all(10),
-                      child: Image.asset(
-                        'assets/images/up_arrow.png',
-                        fit: BoxFit.contain,
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Arrow Button
+                  Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    elevation: 0,
+                    child: InkWell(
+                      onTap: _scrollToSubscriptions,
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: isSmallScreen ? 44 : 50,
+                        height: isSmallScreen ? 44 : 50,
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset(
+                          'assets/images/up_arrow.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+
           ),
           // Woman Image - Right Side
           Positioned(
@@ -640,7 +837,7 @@ class _DashboardViewState extends State<DashboardView>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed(Routes.CUSTOM_ASSESSMENT_CONFIG),
+          onTap: () => Get.toNamed(Routes.PUBLIC_ASSESSMENTS),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(14),
@@ -687,7 +884,7 @@ class _DashboardViewState extends State<DashboardView>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Custom assessments from chapters',
+                        'Assessments from your learning',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -764,6 +961,234 @@ class _DashboardViewState extends State<DashboardView>
                       const SizedBox(height: 4),
                       Text(
                         'Practice sheets & exercises',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExercisesSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.EXERCISES),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.fitness_center_rounded,
+                    color: Color(0xFF8B5CF6),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Exercises',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Chapter-wise practice questions',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportsSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.STUDENT_REPORTS),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF06B6D4).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.insights_rounded,
+                    color: Color(0xFF06B6D4),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Reports',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Progress, history & results',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFreeContentSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.FREE_CONTENT),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.play_lesson_rounded,
+                    color: AppTheme.secondaryColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Free Content',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Explore public videos and resources',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -1096,7 +1521,7 @@ class _DashboardViewState extends State<DashboardView>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed(Routes.QA),
+          onTap: () => Get.toNamed(Routes.STUDENT_QNA_THREADS),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(14),
@@ -1144,6 +1569,82 @@ class _DashboardViewState extends State<DashboardView>
                       const SizedBox(height: 4),
                       Text(
                         'AI-powered answers from courses',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiCounsellorSupportSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.STUDENT_AI_COUNSELLOR),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.psychology_alt_rounded,
+                    color: Color(0xFF2563EB),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AI Counsellor',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Personalized guidance and planning',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -1525,7 +2026,7 @@ class _DashboardViewState extends State<DashboardView>
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          Get.toNamed('/subject-chapter-detail', arguments: subscription);
+          Get.toNamed(Routes.SUBJECT_CHAPTER_DETAIL, arguments: subscription);
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
@@ -1546,7 +2047,7 @@ class _DashboardViewState extends State<DashboardView>
             children: [
               // Large image/placeholder area
               Container(
-                height: 100,
+                height: 88,
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: const BorderRadius.only(
@@ -1554,17 +2055,52 @@ class _DashboardViewState extends State<DashboardView>
                     topRight: Radius.circular(20),
                   ),
                 ),
-                child: Center(
-                  child: Icon(
-                    _getSubjectIcon(subscription.package.name),
-                    size: 44,
-                    color: Colors.grey[400],
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
+                  child: (subscription.package.imageUrl.isNotEmpty)
+                      ? Image.network(
+                          subscription.package.imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Icon(
+                              _getSubjectIcon(subscription.package.name),
+                              size: 44,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primaryColor.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Icon(
+                            _getSubjectIcon(subscription.package.name),
+                            size: 44,
+                            color: Colors.grey[400],
+                          ),
+                        ),
                 ),
               ),
               // Content section
               Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1588,7 +2124,7 @@ class _DashboardViewState extends State<DashboardView>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Stats row
                     Row(
                       children: [
@@ -1623,7 +2159,7 @@ class _DashboardViewState extends State<DashboardView>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Progress bar
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
@@ -1634,7 +2170,7 @@ class _DashboardViewState extends State<DashboardView>
                         valueColor: AlwaysStoppedAnimation<Color>(color),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     // Progress text
                     Text(
                       '$overallPercentage% Completed',
@@ -1824,7 +2360,7 @@ class _DashboardViewState extends State<DashboardView>
                   icon: Icons.trending_up_rounded,
                   label: 'My progress',
                   color: const Color(0xFF06B6D4),
-                  onTap: () => Get.toNamed('/student-progress'),
+                  onTap: () => Get.toNamed(Routes.STUDENT_PROGRESS),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2724,183 +3260,183 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Widget _buildPromotionalVideo(BuildContext context) {
-    // Mock promotional videos data
-    final promotionalVideos = [
+    final featuredVideos = [
       {
-        'title': 'Welcome to Edu Ai Tutors',
-        'description': 'Discover our AI- Powered learning platform',
-        'views': '12.5 k reviews',
-        'thumbnail': 'https://picsum.photos/seed/edu1/640/360',
-        'url':
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        'id': 1,
+        'title': 'Welcome to EduAiTutors',
+        'thumbnail': '/video-cover/welcometo-eduaitutors.png',
+        'duration': '5:30',
+        'embedUrl': 'https://www.youtube.com/embed/-c5r4FSRlh0',
+      },
+      {
+        'id': 2,
+        'title': 'Getting Started Guide',
+        'thumbnail': '/video-cover/getting-starte-guide.png',
+        'duration': '8:15',
+        'embedUrl': 'https://www.youtube.com/embed/U92_mc4KEB0',
+      },
+      {
+        'id': 3,
+        'title': 'How to Use the Platform',
+        'thumbnail': '/video-cover/how-to-use-the-platform.png',
+        'duration': '6:45',
+        'embedUrl': 'https://www.youtube.com/embed/8hly31xKli0',
       },
     ];
+
+    final mediaBaseUrl = ApiConstants.baseUrl.replaceFirst(
+      RegExp(r'/api/?$'),
+      '',
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Featured Videos',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
-                  padding: EdgeInsets.zero,
-                ),
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ),
-            ],
+          const Text(
+            'Featured Videos',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
           ),
           const SizedBox(height: 16),
-          // Single large featured video
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: promotionalVideos.length,
-              padding: const EdgeInsets.only(bottom: 8),
-              itemBuilder: (context, index) {
-                final video = promotionalVideos[index];
+          LayoutBuilder(
+            builder: (context, c) {
+              final crossAxisCount = c.maxWidth >= 700 ? 3 : 2;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: featuredVideos.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 16 / 12,
+                ),
+                itemBuilder: (context, index) {
+                  final v = featuredVideos[index];
+                  final thumbPath = (v['thumbnail'] as String).trim();
+                  final thumbUrl = thumbPath.startsWith('http')
+                      ? thumbPath
+                      : '$mediaBaseUrl$thumbPath';
+                  final duration = (v['duration'] as String?) ?? '';
+                  final embedUrl = (v['embedUrl'] as String?) ?? '';
 
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // Navigate to promotional video player
-                      Get.toNamed(
-                        Routes.PROMOTIONAL_VIDEO_PLAYER,
-                        arguments: {
-                          'videoUrl': video['url'],
-                          'title': video['title'],
-                          'description': video['description'],
-                        },
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width - 32,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF2D3E5F), Color(0xFF1F2937)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Large play button at top
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Color(0xFF2D3E5F),
-                                    size: 30,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                // Title
-                                Text(
-                                  video['title'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    height: 1.3,
-                                  ),
-                                  maxLines: 2,
-                                ),
-                                const SizedBox(height: 6),
-                                // Description
-                                Text(
-                                  video['description'] as String,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white.withOpacity(0.85),
-                                    height: 1.4,
-                                  ),
-                                  maxLines: 2,
-                                ),
-                              ],
-                            ),
-                            // Reviews at bottom
-                            Row(
-                              children: [
-                                Text(
-                                  video['views'] as String,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const Spacer(),
-                                // Watch button
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'Watch',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF06B6D4),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async => _openVideoUrl(embedUrl),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.network(
+                                thumbUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFF1F2937),
+                                ),
+                              ),
+                              // subtle dark overlay for readability
+                              Container(color: Colors.black.withOpacity(0.18)),
+                              // Title overlay (no white background)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    22,
+                                    12,
+                                    10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.75),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Text(
+                                    v['title'] as String,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Center(
+                                child: Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.92),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_circle_fill_rounded,
+                                    color: Color(0xFF2563EB),
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                              if (duration.isNotEmpty)
+                                Positioned(
+                                  right: 8,
+                                  bottom: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      duration,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
@@ -2908,171 +3444,212 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Widget _buildMarketingVideos(BuildContext context) {
-    final videos = [
+    final marketingVideos = [
       {
+        'id': 1,
         'title': 'Teaching Excellence',
-        'duration': '3:45',
-        'description': 'AI-powered teaching methods',
-        'thumbnail': 'https://picsum.photos/seed/marketing1/640/360',
-        'url':
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+        'thumbnail': '/video-cover/teaching-excellence.png',
+        'duration': '10:20',
+        'embedUrl': 'https://www.youtube.com/embed/jL1M8e3NpVc',
+      },
+      {
+        'id': 2,
+        'title': 'Student Success Stories',
+        'thumbnail': '/video-cover/student-success-stories.png',
+        'duration': '12:45',
+        'embedUrl': 'https://www.youtube.com/embed/bkJQOjaIGvk',
+      },
+      {
+        'id': 3,
+        'title': 'Why Choose EduAiTutors',
+        'thumbnail': '/video-cover/why-choose-eduaitutors.png',
+        'duration': '9:30',
+        'embedUrl': 'https://www.youtube.com/embed/Nls9ox39dfQ',
       },
     ];
+
+    final mediaBaseUrl = ApiConstants.baseUrl.replaceFirst(
+      RegExp(r'/api/?$'),
+      '',
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Marketing Videos',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
-                  padding: EdgeInsets.zero,
-                ),
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ),
-            ],
+          const Text(
+            'Marketing Videos',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 110,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: videos.length,
-              padding: const EdgeInsets.only(bottom: 8),
-              itemBuilder: (context, index) {
-                final video = videos[index];
+          LayoutBuilder(
+            builder: (context, c) {
+              final crossAxisCount = c.maxWidth >= 700 ? 3 : 2;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: marketingVideos.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 16 / 12,
+                ),
+                itemBuilder: (context, index) {
+                  final v = marketingVideos[index];
+                  final thumbPath = (v['thumbnail'] as String).trim();
+                  final thumbUrl = thumbPath.startsWith('http')
+                      ? thumbPath
+                      : '$mediaBaseUrl$thumbPath';
+                  final duration = (v['duration'] as String?) ?? '';
+                  final embedUrl = (v['embedUrl'] as String?) ?? '';
 
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Get.toNamed(
-                        Routes.PROMOTIONAL_VIDEO_PLAYER,
-                        arguments: {
-                          'videoUrl': video['url'],
-                          'title': video['title'],
-                          'description': video['description'],
-                        },
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width - 32,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF2D3E5F), Color(0xFF1F2937)],
-                        ),
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async => _openVideoUrl(embedUrl),
+                      child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Small play button
-                                Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Color(0xFF2D3E5F),
-                                    size: 18,
-                                  ),
+                            Image.network(
+                              thumbUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF1F2937),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.15),
+                                    Colors.black.withOpacity(0.65),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                // Title and description
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                              ),
+                            ),
+                            Positioned(
+                              left: 12,
+                              right: 12,
+                              bottom: 12,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    v['title'] as String,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
                                     children: [
                                       Text(
-                                        video['title'] as String,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        video['description'] as String,
+                                        'Watch Now',
                                         style: TextStyle(
+                                          color: Colors.white.withOpacity(0.85),
                                           fontSize: 12,
-                                          color: Colors.white.withOpacity(0.75),
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
+                                      const Spacer(),
+                                      if (duration.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.18),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            duration,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            // Duration at bottom
-                            Row(
-                              children: [
-                                Text(
-                                  video['duration'] as String,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white.withOpacity(0.7),
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                            Center(
+                              child: Container(
+                                width: 54,
+                                height: 54,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.92),
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
+                                child: const Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 34,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openVideoUrl(String url) async {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+
+    final youtubeWatch = _youtubeWatchUrlFromEmbed(trimmed);
+    final uri = Uri.tryParse(youtubeWatch ?? trimmed);
+    if (uri == null) return;
+
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  String? _youtubeWatchUrlFromEmbed(String embedUrl) {
+    try {
+      final uri = Uri.parse(embedUrl);
+      if (!uri.host.contains('youtube.com')) return null;
+      final segments = uri.pathSegments;
+      final embedIndex = segments.indexOf('embed');
+      if (embedIndex == -1 || embedIndex + 1 >= segments.length) return null;
+      final id = segments[embedIndex + 1];
+      if (id.isEmpty) return null;
+      return 'https://www.youtube.com/watch?v=$id';
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildMarketingDocuments(BuildContext context) {

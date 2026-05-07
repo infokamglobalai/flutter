@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/modules/support/controllers/ticket_controller.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TicketDetailsView extends GetView<TicketController> {
   const TicketDetailsView({super.key});
@@ -63,6 +64,10 @@ class TicketDetailsView extends GetView<TicketController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTicketInfo(ticket),
+                  if (ticket.attachments.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _buildAttachments(ticket),
+                  ],
                   const SizedBox(height: 16),
                   _buildResponsesSection(ticket),
                   const SizedBox(height: 100),
@@ -282,6 +287,61 @@ class TicketDetailsView extends GetView<TicketController> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachments(Ticket ticket) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Attachments',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 10),
+          ...ticket.attachments.map((a) {
+            final name = a.fileName;
+            final url = a.fileUrl;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                (a.fileType.toLowerCase().startsWith('video/'))
+                    ? Icons.videocam_rounded
+                    : Icons.image_rounded,
+                color: const Color(0xFFEC4899),
+              ),
+              title: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(a.fileType),
+              trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+              onTap: () async {
+                if (url.isEmpty) return;
+                final uri = Uri.tryParse(url);
+                if (uri == null) return;
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+            );
+          }),
         ],
       ),
     );

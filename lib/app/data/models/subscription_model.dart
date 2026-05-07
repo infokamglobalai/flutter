@@ -44,39 +44,77 @@ class SubscriptionModel {
   });
 
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) {
+    String _asString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v;
+      if (v is num || v is bool) return v.toString();
+      if (v is Map) {
+        final id = v['_id'] ?? v['id'] ?? v['value'];
+        if (id is String) return id;
+        if (id != null) return id.toString();
+      }
+      return v.toString();
+    }
+
+    DateTime _asDate(dynamic v) {
+      if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+      if (v is DateTime) return v;
+      if (v is String && v.isNotEmpty) {
+        return DateTime.tryParse(v) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    DateTime? _asNullableDate(dynamic v) {
+      if (v == null) return null;
+      if (v is DateTime) return v;
+      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
+
+    Map<String, dynamic> _asMap(dynamic v) {
+      if (v is Map<String, dynamic>) return v;
+      if (v is Map) return Map<String, dynamic>.from(v as Map);
+      // Sometimes backend returns an id string instead of a populated object.
+      if (v is String && v.isNotEmpty) return {'_id': v};
+      return const <String, dynamic>{};
+    }
+
     return SubscriptionModel(
-      id: json['_id'] ?? '',
-      student: json['student'] ?? '',
-      package: PackageInfo.fromJson(json['package'] ?? {}),
-      packageType: json['packageType'] ?? '',
-      board: BoardInfo.fromJson(json['board'] ?? {}),
-      grade: GradeInfo.fromJson(json['grade'] ?? {}),
+      id: _asString(json['_id']),
+      student: _asString(json['student']),
+      package: PackageInfo.fromJson(_asMap(json['package'])),
+      packageType: _asString(json['packageType']),
+      board: BoardInfo.fromJson(_asMap(json['board'])),
+      grade: GradeInfo.fromJson(_asMap(json['grade'])),
       subjects:
           (json['subjects'] as List?)
-              ?.map((s) => SubjectInfo.fromJson(s))
+              ?.map((s) => SubjectInfo.fromJson(_asMap(s)))
               .toList() ??
           [],
       chapters:
           (json['chapters'] as List?)
-              ?.map((c) => ChapterInfo.fromJson(c))
+              ?.map((c) => ChapterInfo.fromJson(_asMap(c)))
               .toList() ??
           [],
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       paidAmount: (json['paidAmount'] ?? 0).toDouble(),
       discountApplied: (json['discountApplied'] ?? 0).toDouble(),
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      endDate: _asNullableDate(json['endDate']),
       isActive: json['isActive'] ?? false,
-      paymentStatus: json['paymentStatus'] ?? '',
-      paymentMethod: json['paymentMethod'] ?? '',
-      transactionId: json['transactionId'],
+      paymentStatus: _asString(json['paymentStatus']),
+      paymentMethod: _asString(json['paymentMethod']),
+      transactionId: json['transactionId'] == null
+          ? null
+          : _asString(json['transactionId']),
       paymentHistory:
           (json['paymentHistory'] as List?)
-              ?.map((p) => PaymentHistory.fromJson(p))
+              ?.map((p) => PaymentHistory.fromJson(_asMap(p)))
               .toList() ??
           [],
-      startDate: DateTime.parse(json['startDate']),
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      startDate: _asDate(json['startDate']),
+      createdAt: _asDate(json['createdAt']),
+      updatedAt: _asDate(json['updatedAt']),
     );
   }
 
@@ -161,6 +199,13 @@ class PackageInfo {
       'image': image,
     };
   }
+
+  String get imageUrl {
+    final img = (image ?? '').toString().trim();
+    if (img.isEmpty) return '';
+    if (img.startsWith('http')) return img;
+    return 'https://lms.eduaitutors.com$img';
+  }
 }
 
 class BoardInfo {
@@ -228,13 +273,31 @@ class ChapterInfo {
   });
 
   factory ChapterInfo.fromJson(Map<String, dynamic> json) {
+    String _asString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v;
+      if (v is num || v is bool) return v.toString();
+      if (v is Map) {
+        final id = v['_id'] ?? v['id'] ?? v['value'];
+        if (id is String) return id;
+        if (id != null) return id.toString();
+      }
+      return v.toString();
+    }
+
     return ChapterInfo(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? '',
-      subject: SubjectInfo.fromJson(json['subject'] ?? {}),
-      grade: json['grade'],
+      id: _asString(json['_id']),
+      name: _asString(json['name']),
+      subject: SubjectInfo.fromJson(
+        json['subject'] is Map ? Map<String, dynamic>.from(json['subject']) : {},
+      ),
+      grade: json['grade'] == null ? null : _asString(json['grade']),
       boards:
-          (json['boards'] as List?)?.map((b) => b.toString()).toList() ?? [],
+          (json['boards'] as List?)
+                  ?.map((b) => _asString(b))
+                  .where((s) => s.isNotEmpty)
+                  .toList() ??
+              [],
       price: (json['price'] ?? 0).toDouble(),
       videoCompleted: json['videoCompleted'] ?? false,
     );

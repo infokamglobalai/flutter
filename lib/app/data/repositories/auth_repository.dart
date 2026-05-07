@@ -3,6 +3,9 @@ import 'package:najahapp/app/core/network/api_client.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/data/models/user_model.dart';
 import 'package:najahapp/app/data/models/student_profile_model.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:dio/dio.dart' as dio;
 
 class AuthRepository {
   final ApiClient _apiClient = Get.find<ApiClient>();
@@ -210,6 +213,45 @@ class AuthRepository {
         },
       );
       return UserModel.fromJson(response.data['data']);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<String> updateProfilePicture(XFile file) async {
+    try {
+      final multipart = kIsWeb
+          ? dio.MultipartFile.fromBytes(
+              await file.readAsBytes(),
+              filename: file.name,
+            )
+          : await dio.MultipartFile.fromFile(
+              file.path,
+              filename: file.name,
+            );
+
+      final formData = dio.FormData.fromMap({
+        'profilePicture': multipart,
+      });
+
+      final response = await _apiClient.put(
+        ApiConstants.updateProfilePicture,
+        data: formData,
+        options: dio.Options(
+          headers: {
+            // Let Dio set multipart boundary
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      if (response.data['success'] == true) {
+        final data = response.data['data'] as Map<String, dynamic>? ?? {};
+        return (data['profilePicture'] ?? '').toString();
+      }
+      throw Exception(
+        response.data['message'] ?? 'Failed to update profile picture',
+      );
     } catch (e) {
       rethrow;
     }

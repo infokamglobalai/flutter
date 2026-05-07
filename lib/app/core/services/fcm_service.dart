@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/services/storage_service.dart';
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 // ─── Notification channel constants ────────────────────────────────────────
 const String _kGeneralChannelId   = 'najah_notifications';
@@ -521,20 +522,6 @@ class FCMService extends GetxService {
     }
   }
 
-  // Legacy wrapper — kept so any existing callers still compile
-  Future<void> _showLocalNotification({
-    required String title,
-    required String body,
-    Map<String, dynamic>? payload,
-  }) =>
-      _showLocalNotificationOnChannel(
-        channelId: _kGeneralChannelId,
-        channelName: _kGeneralChannelName,
-        title: title,
-        body: body,
-        payload: payload,
-      );
-
   /// Handle notification opened from background
   void _handleMessageOpenedApp(RemoteMessage message) {
     print('📬 Notification opened: ${message.messageId}');
@@ -564,70 +551,43 @@ class FCMService extends GetxService {
     switch (type) {
       // ── Student / general ──────────────────────────────────────────────
       case 'course':
-        if (resourceId != null) Get.toNamed('/course/$resourceId');
+        // No deep-link route exists in the mobile app for "course/:id".
+        Get.toNamed(Routes.DASHBOARD);
         break;
       case 'assessment':
-        if (resourceId != null) Get.toNamed('/assessment/$resourceId');
+        // Assessments are opened via the learning flow using arguments.
+        Get.toNamed(Routes.DASHBOARD);
         break;
       case 'payment':
-        Get.toNamed('/payment-history');
+        Get.toNamed(Routes.PAYMENT_HISTORY);
         break;
       case 'ticket':
-        if (resourceId != null) Get.toNamed('/ticket/$resourceId');
+        if (resourceId != null) {
+          Get.toNamed('/ticket-details/$resourceId');
+        } else {
+          Get.toNamed(Routes.MY_TICKETS);
+        }
         break;
 
-      // ── Mentor — navigate to mentor dashboard + correct tab ────────────
+      // ── Mentor events ──────────────────────────────────────────────────
+      // Mobile supports only Student + Parent panels. Mentor responds via web.
       case 'mentor_message':
-        _openMentorDashboardTab(2);
-        break;
       case 'mentor_qna':
-        _openMentorDashboardTab(3);
-        break;
       case 'coaching_request':
-        _openMentorDashboardTab(4);
-        break;
       case 'session_booked':
       case 'session_reminder':
-        _openMentorDashboardTab(5);
-        break;
       case 'assessment_submit':
-        _openMentorDashboardTab(6);
-        break;
       case 'announcement_reply':
-        _openMentorDashboardTab(7);
-        break;
       case 'student_feedback':
       case 'low_rated_content':
-        _openMentorDashboardTab(8);
-        break;
       case 'ticket_open':
       case 'ticket_update':
-        _openMentorDashboardTab(9);
+        Get.toNamed(Routes.NOTIFICATIONS);
         break;
 
       default:
-        Get.toNamed('/mentor-dashboard');
+        Get.toNamed(Routes.NOTIFICATIONS);
     }
-  }
-
-  /// Navigate to the mentor dashboard and switch to [tab].
-  void _openMentorDashboardTab(int tab) {
-    Get.toNamed('/mentor-dashboard');
-    // Give the route time to build, then switch tab
-    Future.delayed(const Duration(milliseconds: 500), () {
-      try {
-        // MentorDashboardController is registered without a tag
-        final dynamic ctrl =
-            Get.find(tag: 'MentorDashboardController');
-        (ctrl as dynamic).selectTab(tab);
-      } catch (_) {
-        try {
-          // Fallback: find by type name
-          final dynamic ctrl = Get.find();
-          (ctrl as dynamic).selectTab(tab);
-        } catch (_) {}
-      }
-    });
   }
 
   /// Refresh notification count on any active dashboard controller.
@@ -690,6 +650,28 @@ class FCMService extends GetxService {
       if (savedToken != null && savedToken.isNotEmpty) {
         await _sendTokenToBackend(savedToken);
       }
+    }
+  }
+
+  /// Remove FCM token from backend (call on logout).
+  /// Best-effort: does not throw.
+  Future<void> removeTokenOnLogout() async {
+    try {
+      final token = fcmToken.value.isNotEmpty
+          ? fcmToken.value
+          : (_storageService.getFCMToken() ?? '');
+      if (token.isEmpty) return;
+
+      final authToken = await _storageService.getToken();
+      if (authToken == null || authToken.isEmpty) return;
+      if (!_apiService.hasToken) return;
+
+      await _apiService.post(
+        '/auth/fcm-token/remove',
+        data: {'fcmToken': token, 'platform': Platform.operatingSystem},
+      );
+    } catch (_) {
+      // ignore
     }
   }
 

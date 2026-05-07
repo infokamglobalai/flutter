@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/services/storage_service.dart';
+import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/core/services/fcm_service.dart';
 import 'package:najahapp/app/data/models/user_model.dart';
 import 'package:najahapp/app/data/repositories/auth_repository.dart';
@@ -43,6 +44,9 @@ class AuthController extends GetxController {
       await _storageService.saveRefreshToken(result['refresh_token']);
       await _storageService.saveUserData(result['user'].toJson());
 
+      // Keep ApiService in-memory token cache in sync (used by most app APIs).
+      Get.find<ApiService>().updateCachedToken(result['token']);
+
       // Send FCM token to backend after successful login
       try {
         final fcmService = Get.find<FCMService>();
@@ -55,10 +59,18 @@ class AuthController extends GetxController {
       final userRole = result['user'].role.toString().toLowerCase();
       if (userRole == 'parent') {
         Get.offAllNamed(Routes.PARENT_DASHBOARD);
-      } else if (userRole == 'mentor') {
-        Get.offAllNamed(Routes.MENTOR_DASHBOARD);
-      } else {
+      } else if (userRole == 'student') {
         Get.offAllNamed(Routes.DASHBOARD);
+      } else {
+        // Mobile app supports only Student + Parent panels.
+        Get.snackbar(
+          'Not supported',
+          'Only Student and Parent accounts are supported in the mobile app.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        await logout();
       }
       return true;
     } catch (e) {
@@ -101,6 +113,8 @@ class AuthController extends GetxController {
       await _storageService.saveToken(result['token']);
       await _storageService.saveRefreshToken(result['refresh_token']);
       await _storageService.saveUserData(result['user'].toJson());
+
+      Get.find<ApiService>().updateCachedToken(result['token']);
 
       // Send FCM token to backend after successful registration
       try {
@@ -186,8 +200,10 @@ class AuthController extends GetxController {
       // Save user data and token
       currentUser.value = result['user'];
       await _storageService.saveToken(result['token']);
-      await _storageService.saveRefreshToken(result['token']);
+      await _storageService.saveRefreshToken(result['refresh_token']);
       await _storageService.saveUserData(result['user'].toJson());
+
+      Get.find<ApiService>().updateCachedToken(result['token']);
 
       // Send FCM token to backend after successful verification
       try {
@@ -224,12 +240,20 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     try {
       isLoading.value = true;
+      // Best-effort: remove FCM token from backend before clearing auth
+      try {
+        final fcmService = Get.find<FCMService>();
+        await fcmService.removeTokenOnLogout();
+      } catch (_) {}
+
       // Best-effort API call — don't block logout if backend is unreachable
       await _authRepository.logout().catchError((_) {});
     } finally {
       isLoading.value = false;
       // Always clear local session and navigate, regardless of API result
       await _storageService.clearAuth();
+      // Clear in-memory token cache as well.
+      Get.find<ApiService>().updateCachedToken('');
       currentUser.value = null;
       Get.offAllNamed(Routes.LOGIN);
     }
@@ -325,10 +349,17 @@ class AuthController extends GetxController {
       final userRole = result['user'].role.toString().toLowerCase();
       if (userRole == 'parent') {
         Get.offAllNamed(Routes.PARENT_DASHBOARD);
-      } else if (userRole == 'mentor') {
-        Get.offAllNamed(Routes.MENTOR_DASHBOARD);
-      } else {
+      } else if (userRole == 'student') {
         Get.offAllNamed(Routes.DASHBOARD);
+      } else {
+        Get.snackbar(
+          'Not supported',
+          'Only Student and Parent accounts are supported in the mobile app.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        await logout();
       }
       return true;
     } catch (e) {

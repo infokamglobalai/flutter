@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/packages/controllers/all_packages_controller.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class AllPackagesView extends GetView<AllPackagesController> {
   const AllPackagesView({super.key});
@@ -256,7 +257,7 @@ class AllPackagesView extends GetView<AllPackagesController> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Get.toNamed('/package-selection', arguments: package);
+            Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package);
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
@@ -403,7 +404,7 @@ class AllPackagesView extends GetView<AllPackagesController> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Get.toNamed('/package-selection', arguments: package);
+            Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package);
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(

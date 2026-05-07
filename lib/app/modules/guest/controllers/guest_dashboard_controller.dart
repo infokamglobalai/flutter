@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:najahapp/app/data/services/guest_resource_service.dart';
 
 class GuestDashboardController extends GetxController {
+  final GuestResourceService _guestResourceService =
+      Get.find<GuestResourceService>();
+
   // Registration interest form controllers
   final parentNameController = TextEditingController();
   final parentEmailController = TextEditingController();
@@ -86,11 +90,31 @@ class GuestDashboardController extends GetxController {
         },
       ].obs;
 
+  // Guest resources from backend (public)
+  final RxBool isLoadingGuestResources = false.obs;
+  final RxString guestResourcesError = ''.obs;
+  final RxList<Map<String, dynamic>> guestResources = <Map<String, dynamic>>[].obs;
+
   @override
   void onInit() {
     super.onInit();
     if (marketingVideos.isNotEmpty) {
       currentVideoUrl.value = marketingVideos[0]['url'];
+    }
+    loadGuestResources();
+  }
+
+  Future<void> loadGuestResources() async {
+    try {
+      isLoadingGuestResources.value = true;
+      guestResourcesError.value = '';
+      final list = await _guestResourceService.getPublic();
+      guestResources.assignAll(list);
+    } catch (e) {
+      guestResourcesError.value = e.toString().replaceAll('Exception: ', '');
+      guestResources.clear();
+    } finally {
+      isLoadingGuestResources.value = false;
     }
   }
 

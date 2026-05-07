@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 import '../controllers/subject_chapter_controller.dart';
 
 class SubjectChapterDetailView extends GetView<SubjectChapterController> {
@@ -19,7 +20,7 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
               children: [
                 _buildPackageInfo(context),
                 const SizedBox(height: 12),
-                _buildPackageSelfAssessmentButton(context),
+                _buildPackageMocktestsButton(context),
                 const SizedBox(height: 16),
                 _buildSubjectFilter(context),
                 const SizedBox(height: 24),
@@ -56,6 +57,21 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         onPressed: () => Get.back(),
       ),
+      actions: [
+        Obx(() {
+          final subId = controller.subscription.value?.id ?? '';
+          return IconButton(
+            tooltip: 'Mock tests',
+            onPressed: subId.isEmpty
+                ? null
+                : () => Get.toNamed(
+                      Routes.STUDENT_MOCKTESTS,
+                      arguments: {'subscriptionId': subId},
+                    ),
+            icon: const Icon(Icons.fact_check_rounded, color: Colors.white),
+          );
+        }),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
@@ -526,7 +542,6 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
     final badgeFontSize = isSmallScreen ? 14.0 : 16.0;
     final titleFontSize = isSmallScreen ? 13.0 : 14.0;
     final metaFontSize = isSmallScreen ? 10.0 : 11.0;
-    final metaIconSize = isSmallScreen ? 12.0 : 14.0;
     final arrowSize = isSmallScreen ? 16.0 : 18.0;
 
     final progress = chapter['progress'] as double? ?? 0.0;
@@ -585,38 +600,13 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 5 : 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.play_circle_outline_rounded,
-                        size: metaIconSize,
-                        color: Colors.grey[600],
-                      ),
-                      SizedBox(width: isSmallScreen ? 3 : 4),
-                      Text(
-                        chapter['duration'] as String,
-                        style: TextStyle(
-                          fontSize: metaFontSize,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 10 : 12),
-                      Icon(
-                        Icons.description_outlined,
-                        size: metaIconSize,
-                        color: Colors.grey[600],
-                      ),
-                      SizedBox(width: isSmallScreen ? 3 : 4),
-                      Text(
-                        '${(chapter['documents'] as List).length} docs',
-                        style: TextStyle(
-                          fontSize: metaFontSize,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    isCompleted ? 'Completed' : 'Tap to start',
+                    style: TextStyle(
+                      fontSize: metaFontSize,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   if (progress > 0 && progress < 1) ...[
                     SizedBox(height: isSmallScreen ? 6 : 8),
@@ -647,7 +637,7 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
     );
   }
 
-  Widget _buildPackageSelfAssessmentButton(BuildContext context) {
+  Widget _buildPackageMocktestsButton(BuildContext context) {
     final screenWidth = Get.width;
     final isSmallScreen = screenWidth < 360;
     final isMediumScreen = screenWidth >= 360 && screenWidth < 400;
@@ -657,7 +647,6 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
       final subscription = controller.subscription.value;
       if (subscription == null) return const SizedBox.shrink();
 
-      final totalChapters = subscription.chapters.length;
       final titleFontSize = isSmallScreen
           ? 14.0
           : (isMediumScreen ? 15.0 : 16.0);
@@ -668,10 +657,9 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
         child: InkWell(
           onTap: () {
             Get.toNamed(
-              '/self-assessment-list',
+              Routes.STUDENT_MOCKTESTS,
               arguments: {
-                'subscription': subscription,
-                // no 'subject' → controller shows all chapters
+                'subscriptionId': subscription.id,
               },
             );
           },
@@ -704,7 +692,7 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
                     ),
                   ),
                   child: Icon(
-                    Icons.psychology_rounded,
+                    Icons.fact_check_rounded,
                     color: Colors.white,
                     size: isSmallScreen ? 24.0 : 28.0,
                   ),
@@ -715,7 +703,7 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Self Assessment',
+                        'Mock Tests',
                         style: TextStyle(
                           fontSize: titleFontSize,
                           fontWeight: FontWeight.bold,
@@ -724,7 +712,7 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
                       ),
                       SizedBox(height: isSmallScreen ? 3 : 4),
                       Text(
-                        'All subjects · $totalChapters chapters available',
+                        'Practice tests based on your learning',
                         style: TextStyle(
                           fontSize: subtitleFontSize,
                           color: Colors.white70,

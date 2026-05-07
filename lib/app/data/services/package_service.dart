@@ -1,14 +1,16 @@
 import 'package:dio/dio.dart';
+import 'package:get/get.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
 
 class PackageService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
 
   /// Fetch all public packages
   Future<List<PackageModel>> getPublicPackages() async {
     try {
-      final response = await _apiService.get('/packages/public');
+      final response = await _apiService.get(ApiConstants.packagesPublic);
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -40,7 +42,7 @@ class PackageService {
   /// Fetch package by ID
   Future<PackageModel> getPackageById(String packageId) async {
     try {
-      final response = await _apiService.get('/packages/$packageId');
+      final response = await _apiService.get(ApiConstants.packageById(packageId));
 
       if (response.statusCode == 200) {
         final data = response.data;

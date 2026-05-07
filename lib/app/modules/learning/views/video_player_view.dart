@@ -1,8 +1,12 @@
+// ignore_for_file: unused_element
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewie/chewie.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controllers/video_player_controller.dart' as learning;
 import '../widgets/math_text_widget.dart';
 
@@ -87,7 +91,90 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
         children: [
           _buildMainHeader(context, isMobile),
           if (!isMobile) _buildChapterInfo(context),
-          _buildVideoPlayer(context, isMobile),
+          Stack(
+            children: [
+              _buildVideoPlayer(context, isMobile),
+              // Debug overlay to diagnose "blank video" on some devices/builds.
+              // This is lightweight and only shows when video isn't playing yet.
+              Positioned(
+                left: 12,
+                bottom: 12,
+                child: Obx(() {
+                  final show =
+                      !controller.isVideoInitialized.value ||
+                      controller.isVideoLoading.value ||
+                      controller.videoErrorMessage.value.isNotEmpty;
+                  if (!show) return const SizedBox.shrink();
+                  final content = controller.currentContent.value;
+                  final vt = content?.videoType ?? '';
+                  final y = content?.videoUrl ?? '';
+                  final up = content?.uploadedVideoPath ?? '';
+                  final err = controller.videoErrorMessage.value.trim();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.12),
+                      ),
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.86,
+                    ),
+                    child: DefaultTextStyle(
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        height: 1.25,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'chapterId=${controller.chapterId.value} subId=${controller.subscriptionId.value}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'content=${content?.title ?? '(null)'} vt=$vt',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (y.trim().isNotEmpty)
+                            Text(
+                              'youtube=$y',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (up.trim().isNotEmpty)
+                            Text(
+                              'uploaded=$up',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          Text(
+                            'init=${controller.isVideoInitialized.value} loading=${controller.isVideoLoading.value} yt=${controller.isYoutubeVideo.value}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (err.isNotEmpty)
+                            Text(
+                              'err=$err',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
           // _buildVideoControls(context, isMobile),
         ],
       ),
@@ -216,59 +303,67 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
   Widget _buildContentTabsSection(BuildContext context, bool isMobile) {
     return DefaultTabController(
       length: 4,
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TabBar(
-              labelColor: AppTheme.primaryColor,
-              unselectedLabelColor: Colors.grey[600],
-              indicatorColor: AppTheme.primaryColor,
-              indicatorWeight: 3,
-              labelStyle: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: isMobile ? 12 : 14,
+      child: Builder(
+        builder: (tabContext) {
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TabBar(
+                      labelColor: AppTheme.primaryColor,
+                      unselectedLabelColor: Colors.grey[600],
+                      indicatorColor: AppTheme.primaryColor,
+                      indicatorWeight: 3,
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 12 : 14,
+                      ),
+                      tabs: [
+                        Tab(
+                          icon: Icon(Icons.video_library, size: isMobile ? 18 : 22),
+                          text: 'Overview',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.description, size: isMobile ? 18 : 22),
+                          text: 'Resources',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.assignment, size: isMobile ? 18 : 22),
+                          text: 'Exercise',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.forum, size: isMobile ? 18 : 22),
+                          text: 'Ask AI',
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildOverviewTab(tabContext, isMobile),
+                        _buildResourcesTab(tabContext, isMobile),
+                        _buildExerciseTab(tabContext, isMobile),
+                        _buildQATab(tabContext, isMobile),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              tabs: [
-                Tab(
-                  icon: Icon(Icons.video_library, size: isMobile ? 18 : 22),
-                  text: 'Overview',
-                ),
-                Tab(
-                  icon: Icon(Icons.description, size: isMobile ? 18 : 22),
-                  text: 'Resources',
-                ),
-                Tab(
-                  icon: Icon(Icons.assignment, size: isMobile ? 18 : 22),
-                  text: 'Exercise',
-                ),
-                Tab(
-                  icon: Icon(Icons.forum, size: isMobile ? 18 : 22),
-                  text: 'Ask AI',
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildOverviewTab(context, isMobile),
-                _buildResourcesTab(context, isMobile),
-                _buildExerciseTab(context, isMobile),
-                _buildQATab(context, isMobile),
-              ],
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -290,7 +385,8 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
               children: [
                 // Assessment button if available
                 Obx(() {
-                  if (!controller.isAssessmentAvailable.value) {
+                  if (!controller.isAssessmentAvailable.value ||
+                      !controller.isVideoCompleted.value) {
                     return const SizedBox.shrink();
                   }
 
@@ -355,15 +451,8 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                         const SizedBox(width: 10),
                         ElevatedButton.icon(
                           onPressed: () {
-                            print('🎯 Start Assessment button clicked');
-                            print(
-                              '   Assessment available: ${controller.isAssessmentAvailable.value}',
-                            );
-                            print(
-                              '   Assessment data: ${controller.assessmentData.value != null ? "Present" : "NULL"}',
-                            );
                             controller.startAssessment();
-                            Get.toNamed('/assessment');
+                            controller.openAssessmentAttempt();
                           },
                           icon: const Icon(Icons.play_arrow, size: 16),
                           label: const Text('Start'),
@@ -378,6 +467,88 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                // Chapter Q&A (backend: /qna?chapterId&packageId)
+                Obx(() {
+                  final chapId = controller.chapterId.value;
+                  final subId = controller.subscriptionId.value;
+                  if (chapId.isEmpty || subId.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withOpacity(0.15),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.question_answer_rounded,
+                            color: AppTheme.primaryColor,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Chapter Q&A',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Ask a doubt and get mentor answers',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () => Get.toNamed(
+                            Routes.STUDENT_QNA_THREAD,
+                            arguments: {'chapterId': chapId, 'subscriptionId': subId},
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Open'),
                         ),
                       ],
                     ),
@@ -1176,21 +1347,34 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
 
           // Listening Indicator
           Obx(() {
-            if (!controller.isListening.value) {
+            if (!controller.isListening.value &&
+                !controller.isVoiceAssistantProcessing.value) {
               return const SizedBox.shrink();
             }
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(color: Colors.red.withOpacity(0.1)),
+              decoration: BoxDecoration(
+                color: controller.isListening.value
+                    ? Colors.red.withOpacity(0.1)
+                    : AppTheme.secondaryColor.withOpacity(0.10),
+              ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: controller.isListening.value
+                          ? Colors.red
+                          : AppTheme.secondaryColor,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.mic, color: Colors.white, size: 16),
+                    child: Icon(
+                      controller.isListening.value
+                          ? Icons.mic_rounded
+                          : Icons.auto_awesome_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1199,20 +1383,32 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Listening...',
+                          controller.isListening.value
+                              ? 'Listening...'
+                              : 'Thinking...',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.red[700],
+                            color: controller.isListening.value
+                                ? Colors.red[700]
+                                : AppTheme.secondaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          'Speak your question',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                          ),
-                        ),
+                        Obx(() {
+                          final t = controller.lastVoiceTranscript.value.trim();
+                          final hint = controller.isListening.value
+                              ? (t.isEmpty ? 'Speak your question' : t)
+                              : 'Generating answer...';
+                          return Text(
+                            hint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -1222,7 +1418,11 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        controller.isListening.value
+                            ? Colors.red
+                            : AppTheme.secondaryColor,
+                      ),
                     ),
                   ),
                 ],
@@ -1278,6 +1478,8 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                 const SizedBox(width: 8),
                 // Microphone button
                 Obx(() {
+                  final disabled = controller.isSendingMessage.value ||
+                      controller.isVoiceAssistantProcessing.value;
                   return Material(
                     color: controller.isListening.value
                         ? Colors.red
@@ -1285,15 +1487,13 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                     borderRadius: BorderRadius.circular(24),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(24),
-                      onTap: controller.isSendingMessage.value
-                          ? null
-                          : controller.toggleListening,
+                      onTap: disabled ? null : controller.toggleGeminiVoiceAssistant,
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         child: Icon(
                           controller.isListening.value
-                              ? Icons.mic
-                              : Icons.mic_none,
+                              ? Icons.stop_rounded
+                              : Icons.mic_rounded,
                           color: controller.isListening.value
                               ? Colors.white
                               : Colors.grey[600],
@@ -1864,11 +2064,20 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
 
   Widget _buildVideoPlayer(BuildContext context, bool isMobile) {
     return Obx(() {
+      final vc = controller.videoController;
+      final rawAspect = (vc != null && vc.value.isInitialized)
+          ? vc.value.aspectRatio
+          : (16 / 9);
+      // Defensive: some platforms report 0.0 before init, which can crash
+      // AspectRatio in release builds and appear as a blank screen.
+      final dynamicAspect = (rawAspect.isFinite && rawAspect > 0.01)
+          ? rawAspect
+          : (16 / 9);
       if (!controller.isVideoInitialized.value) {
         // Still loading vs completely failed
         if (controller.isVideoLoading.value) {
           return AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: dynamicAspect,
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 20),
               decoration: BoxDecoration(
@@ -1897,7 +2106,7 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
         }
         // Failed to load
         return AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: dynamicAspect,
           child: Container(
             margin: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 20),
             decoration: BoxDecoration(
@@ -1930,6 +2139,102 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
         );
       }
 
+      // Defensive: initialized flag true but controllers missing -> show error + retry
+      final hasYoutube = controller.isYoutubeVideo.value &&
+          controller.youtubeController != null;
+      final hasChewie = !controller.isYoutubeVideo.value &&
+          controller.chewieController != null;
+      if (!hasYoutube && !hasChewie) {
+        final msg = controller.videoErrorMessage.value.trim();
+        return AspectRatio(
+          aspectRatio: dynamicAspect,
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0E14),
+              borderRadius: BorderRadius.circular(isMobile ? 12 : 20),
+              border: Border.all(
+                color: Colors.red.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 54,
+                      color: Colors.red.withOpacity(0.75),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Video unavailable',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (msg.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        msg,
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: controller.retryVideo,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    if (controller.isEmulator.value &&
+                        (controller.currentContent.value?.uploadedVideoPath
+                                .trim()
+                                .isNotEmpty ??
+                            false)) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final u = controller
+                              .currentContent.value!.uploadedVideoPath
+                              .trim();
+                          final uri = Uri.tryParse(u);
+                          if (uri == null) return;
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                        label: const Text('Open video externally'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(color: Colors.white.withOpacity(0.4)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       return Container(
         margin: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 20),
         decoration: BoxDecoration(
@@ -1949,50 +2254,332 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
+          // Keep the video area height bounded by width (prevents infinite-height
+          // layout when this widget is placed in a scrollable/Column).
           child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: controller.isYoutubeVideo.value
-                ? (controller.youtubeController != null
-                      ? YoutubePlayer(
-                          controller: controller.youtubeController!,
-                          showVideoProgressIndicator: true,
-                          progressIndicatorColor: AppTheme.primaryColor,
-                          progressColors: ProgressBarColors(
-                            playedColor: AppTheme.primaryColor,
-                            handleColor: AppTheme.primaryColor,
-                            backgroundColor: AppTheme.primaryColor.withOpacity(
-                              0.3,
+            aspectRatio: dynamicAspect,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                controller.isYoutubeVideo.value
+                    ? (controller.youtubeController != null
+                        ? YoutubePlayer(
+                            controller: controller.youtubeController!,
+                            showVideoProgressIndicator: true,
+                            progressIndicatorColor: AppTheme.primaryColor,
+                            progressColors: ProgressBarColors(
+                              playedColor: AppTheme.primaryColor,
+                              handleColor: AppTheme.primaryColor,
+                              backgroundColor:
+                                  AppTheme.primaryColor.withOpacity(0.3),
+                              bufferedColor:
+                                  AppTheme.primaryColor.withOpacity(0.5),
                             ),
-                            bufferedColor: AppTheme.primaryColor.withOpacity(
-                              0.5,
+                          )
+                        : Container(
+                            color: const Color(0xFF0A0E14),
+                            child: Center(
+                              child: Icon(
+                                Icons.play_circle_outline_rounded,
+                                size: 140,
+                                color: Colors.white.withOpacity(0.1),
+                              ),
+                            ),
+                          ))
+                    : (controller.chewieController != null
+                        ? Chewie(controller: controller.chewieController!)
+                        : Container(
+                            color: const Color(0xFF0A0E14),
+                            child: Center(
+                              child: Icon(
+                                Icons.play_circle_outline_rounded,
+                                size: 140,
+                                color: Colors.white.withOpacity(0.1),
+                              ),
+                            ),
+                          )),
+
+                // Scheduled countdown overlay (before live)
+                Obx(() {
+                if (!controller.isLockedBySchedule.value) {
+                  return const SizedBox.shrink();
+                }
+                final secs =
+                    controller.timeRemainingUntilLiveSeconds.value ?? 0;
+                final m = (secs ~/ 60).toString().padLeft(2, '0');
+                final s = (secs % 60).toString().padLeft(2, '0');
+                return Container(
+                  color: Colors.black.withOpacity(0.65),
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.live_tv_rounded,
+                          color: Colors.white,
+                          size: 46,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Live premiere starts in',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$m:$s',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                }),
+
+                // LIVE badge (first watch during premiere window)
+                Obx(() {
+                  if (!controller.isPremiere.value ||
+                      controller.isLockedBySchedule.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned(
+                    left: 12,
+                    top: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
                             ),
                           ),
-                        )
-                      : Container(
-                          color: const Color(0xFF0A0E14),
-                          child: Center(
-                            child: Icon(
-                              Icons.play_circle_outline_rounded,
-                              size: 140,
-                              color: Colors.white.withOpacity(0.1),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.6,
                             ),
                           ),
-                        ))
-                : (controller.chewieController != null
-                      ? Chewie(controller: controller.chewieController!)
-                      : Container(
-                          color: const Color(0xFF0A0E14),
-                          child: Center(
-                            child: Icon(
-                              Icons.play_circle_outline_rounded,
-                              size: 140,
-                              color: Colors.white.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+
+              // Poll overlay (only during premiere)
+              Obx(() {
+                final poll = controller.activePoll.value;
+                if (poll == null) return const SizedBox.shrink();
+
+                final q = poll['question']?.toString() ?? 'Quick poll';
+                final opts = (poll['options'] as List?)
+                        ?.map((e) => e.toString())
+                        .toList() ??
+                    const <String>[];
+                final duration = (poll['duration'] as num?)?.toInt() ?? 15;
+                final res = controller.pollResult.value;
+                final selected = (res?['selectedIndex'] as int?);
+                final correct = (poll['correctAnswer'] as num?)?.toInt();
+
+                return Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          blurRadius: 30,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accentColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.poll_rounded,
+                                color: AppTheme.accentColor,
+                              ),
                             ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Quick Poll',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          q,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                            height: 1.3,
                           ),
-                        )),
+                        ),
+                        const SizedBox(height: 12),
+                        ...List.generate(opts.length, (i) {
+                          final text = opts[i];
+                          final answered = selected != null;
+                          final isSel = selected == i;
+                          final isCor = correct != null && correct == i;
+
+                          Color border = Colors.grey[300]!;
+                          Color bg = Colors.white;
+                          if (answered) {
+                            if (isCor) {
+                              border = const Color(0xFF10B981);
+                              bg = const Color(0xFF10B981).withOpacity(0.10);
+                            } else if (isSel && !isCor) {
+                              border = const Color(0xFFEF4444);
+                              bg = const Color(0xFFEF4444).withOpacity(0.10);
+                            }
+                          } else if (isSel) {
+                            border = AppTheme.primaryColor;
+                            bg = AppTheme.primaryColor.withOpacity(0.06);
+                          }
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: bg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: border, width: 1.2),
+                            ),
+                            child: InkWell(
+                              onTap: answered
+                                  ? null
+                                  : () => controller.answerActivePoll(i),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: answered && isCor
+                                            ? const Color(0xFF10B981)
+                                                .withOpacity(0.12)
+                                            : Colors.grey[100],
+                                      ),
+                                      child: Text(
+                                        String.fromCharCode(65 + i),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        text,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                        ),
+                                      ),
+                                    ),
+                                    if (answered && isCor)
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                    if (answered && isSel && !isCor)
+                                      const Icon(
+                                        Icons.cancel,
+                                        color: Color(0xFFEF4444),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 6),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 1, end: 0),
+                          duration: Duration(seconds: duration),
+                          builder: (context, value, _) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: value,
+                                minHeight: 6,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppTheme.accentColor,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
-      );
+      ),
+    );
     });
   }
 
@@ -2676,7 +3263,12 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Page ${controller.currentPage.value} of ${controller.totalPages.value}',
+                                      (doc['fileSize'] != null &&
+                                              (doc['fileSize'] as String)
+                                                  .toString()
+                                                  .isNotEmpty)
+                                          ? 'Size: ${doc['fileSize']}'
+                                          : 'Document',
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey[600],
@@ -2718,141 +3310,110 @@ class VideoPlayerView extends GetView<learning.VideoPlayerController> {
                             ],
                           ),
                         ),
-                        // Dummy PDF Content (Lecture Notes)
+                        // Real document actions (backend-provided fileUrl/filePath)
                         Container(
-                          padding: const EdgeInsets.all(32),
+                          padding: const EdgeInsets.all(24),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Document title section
-                              Center(
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            AppTheme.primaryColor,
-                                            AppTheme.secondaryColor,
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        'LECTURE NOTES',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      doc['title'] as String? ??
-                                          doc['fileName'] as String? ??
-                                          'Document',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1F2937),
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Chapter ${controller.currentPage.value}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              // Section 1
-                              _buildNotesSection(
-                                '1. Introduction',
-                                'This chapter introduces the fundamental concepts and principles that form the foundation of our study. Understanding these core ideas is essential for mastering more advanced topics in subsequent chapters.',
-                              ),
-                              const SizedBox(height: 24),
-                              // Key Points
-                              _buildKeyPointsBox(),
-                              const SizedBox(height: 24),
-                              // Section 2
-                              _buildNotesSection(
-                                '2. Core Concepts',
-                                'The following concepts are critical to understanding this subject:\n\n• Concept A: Explains the primary mechanism\n• Concept B: Describes the relationship between elements\n• Concept C: Provides practical applications\n• Concept D: Illustrates advanced techniques',
-                              ),
-                              const SizedBox(height: 24),
-                              // Example Box
-                              _buildExampleBox(),
-                              const SizedBox(height: 24),
-                              // Section 3
-                              _buildNotesSection(
-                                '3. Important Formula',
-                                'The main formula to remember is:\n\nResult = (Input × Factor) + Constant\n\nWhere:\n• Input represents the initial value\n• Factor is the multiplication coefficient\n• Constant is the base adjustment',
-                              ),
-                              const SizedBox(height: 24),
-                              // Practice Problems
-                              _buildPracticeBox(),
-                              const SizedBox(height: 32),
-                              // Summary
-                              Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppTheme.primaryColor.withOpacity(0.1),
-                                      AppTheme.secondaryColor.withOpacity(0.05),
-                                    ],
+                              if ((doc['description'] as String?) != null &&
+                                  (doc['description'] as String)
+                                      .toString()
+                                      .trim()
+                                      .isNotEmpty) ...[
+                                Text(
+                                  (doc['description'] as String).toString(),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                    height: 1.35,
                                   ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: AppTheme.primaryColor.withOpacity(
-                                      0.2,
-                                    ),
+                                    color: AppTheme.primaryColor.withOpacity(0.12),
                                   ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.summarize_rounded,
-                                          color: AppTheme.primaryColor,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          'Summary',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1F2937),
-                                          ),
-                                        ),
-                                      ],
+                                    Icon(
+                                      Icons.description_rounded,
+                                      color: AppTheme.primaryColor,
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'In this chapter, we covered the fundamental principles and their applications. Make sure to practice the examples and review the key points before moving to the next chapter.',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                        height: 1.6,
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        (doc['fileName'] as String?) ??
+                                            (doc['title'] as String?) ??
+                                            'Document',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1F2937),
+                                        ),
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () =>
+                                          controller.downloadAndOpenResource(doc),
+                                      icon: const Icon(Icons.open_in_new_rounded),
+                                      label: const Text('Open'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: controller.downloadDocumentForOffline,
+                                      icon: const Icon(Icons.download_rounded),
+                                      label: const Text('Download'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.primaryColor,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        side: BorderSide(
+                                          color: AppTheme.primaryColor.withOpacity(0.35),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Tip: If the file opens in another app, come back here to continue your video.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
                                 ),
                               ),
                             ],

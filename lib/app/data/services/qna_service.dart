@@ -1,6 +1,7 @@
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/data/models/qna_model.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
 
 class QnaService {
   final ApiService _api = Get.find<ApiService>();
@@ -10,7 +11,7 @@ class QnaService {
   /// Returns all QnA threads for the logged-in student.
   Future<Map<String, dynamic>> getStudentThreads() async {
     try {
-      final resp = await _api.get('/qna/threads');
+      final resp = await _api.get(ApiConstants.qnaThreads);
       if (resp.data['success'] == true) {
         final list = (resp.data['data'] as List<dynamic>)
             .map((e) => QnaThread.fromJson(e as Map<String, dynamic>))
@@ -30,7 +31,8 @@ class QnaService {
   }) async {
     try {
       final resp = await _api.get(
-        '/qna?chapterId=$chapterId&packageId=$packageId',
+        ApiConstants.qnaGetThread,
+        queryParameters: {'chapterId': chapterId, 'packageId': packageId},
       );
       if (resp.data['success'] == true) {
         final raw = resp.data['data'];
@@ -56,7 +58,7 @@ class QnaService {
   }) async {
     try {
       final resp = await _api.post(
-        '/qna/question',
+        ApiConstants.qnaAskQuestion,
         data: {
           'chapterId': chapterId,
           'packageId': packageId,

@@ -35,32 +35,49 @@ class PackageModel {
     required this.updatedAt,
   });
 
+  static String _asString(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is Map && value.containsKey('_id')) return value['_id'].toString();
+    if (value is Map && value.containsKey('id')) return value['id'].toString();
+    return value.toString();
+  }
+
   factory PackageModel.fromJson(Map<String, dynamic> json) {
     return PackageModel(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      types: (json['types'] as List<dynamic>).map((e) => e as String).toList(),
-      description: json['description'] as String,
-      chapters: (json['chapters'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-      totalPrice: (json['totalPrice'] as num).toDouble(),
-      validityDays: json['validityDays'] as int,
-      image: json['image'] as String?,
-      isActive: json['isActive'] as bool,
+      id: _asString(json['_id']),
+      name: _asString(json['name']),
+      types: json['types'] != null
+          ? (json['types'] as List<dynamic>).map((e) => _asString(e)).toList()
+          : [],
+      description: _asString(json['description']),
+      chapters: json['chapters'] != null
+          ? (json['chapters'] as List<dynamic>)
+              .map((e) => _asString(e))
+              .toList()
+          : [],
+      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      validityDays: json['validityDays'] as int? ?? 0,
+      image: json['image'] != null ? _asString(json['image']) : null,
+      isActive: json['isActive'] as bool? ?? false,
       isCompetitiveExam: json['isCompetitiveExam'] as bool? ?? false,
       displayOrder: json['displayOrder'] as int? ?? 0,
       grades: json['grades'] != null
-          ? (json['grades'] as List<dynamic>).map((e) => e as String).toList()
+          ? (json['grades'] as List<dynamic>).map((e) => _asString(e)).toList()
           : [],
       discount: json['discount'] != null
           ? PackageDiscount.fromJson(json['discount'] as Map<String, dynamic>)
           : null,
-      createdBy: json['createdBy'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdBy: _asString(json['createdBy']),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(_asString(json['createdAt']))
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(_asString(json['updatedAt']))
+          : DateTime.now(),
     );
   }
+
 
   Map<String, dynamic> toJson() {
     return {
@@ -109,15 +126,18 @@ class PackageDiscount {
 
   factory PackageDiscount.fromJson(Map<String, dynamic> json) {
     return PackageDiscount(
-      isActive: json['isActive'] as bool,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      percentage: (json['percentage'] as num).toDouble(),
-      freebies: (json['freebies'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
+      isActive: json['isActive'] as bool? ?? false,
+      title: PackageModel._asString(json['title']),
+      description: PackageModel._asString(json['description']),
+      percentage: (json['percentage'] as num?)?.toDouble() ?? 0.0,
+      freebies: json['freebies'] != null
+          ? (json['freebies'] as List<dynamic>)
+              .map((e) => PackageModel._asString(e))
+              .toList()
+          : [],
     );
   }
+
 
   Map<String, dynamic> toJson() {
     return {

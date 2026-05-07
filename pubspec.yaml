@@ -75,6 +75,7 @@ dependencies:
   intl: ^0.19.0
   logger: ^2.0.2+1
   url_launcher: ^6.2.4
+  device_info_plus: ^11.2.2
   image_picker: ^1.0.7
   crypto: ^3.0.3
   
@@ -82,9 +83,9 @@ dependencies:
   payu_checkoutpro_flutter: ^1.3.7
   
   # Analytics & Tracking
-  firebase_core: ^2.25.4
-  firebase_analytics: ^10.8.5
-  firebase_messaging: ^14.7.10
+  firebase_core: ^4.7.0
+  firebase_analytics: ^12.3.0
+  firebase_messaging: ^16.2.0
   flutter_local_notifications: ^17.0.0
 
   
@@ -101,6 +102,8 @@ dependencies:
   
   # Math Rendering
   flutter_math_fork: ^0.7.2
+  # Required for firebase_* web interop (PromiseJsImpl/handleThenable)
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

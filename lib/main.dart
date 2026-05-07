@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -7,16 +10,39 @@ import 'package:najahapp/app/core/services/storage_service.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    FlutterError.onError = (details) {
+      FlutterError.dumpErrorToConsole(details);
+    };
 
-  // Initialize Storage Service
-  await Get.putAsync(() => StorageService().init());
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FlutterError.dumpErrorToConsole(
+        FlutterErrorDetails(exception: error, stack: stack),
+      );
+      return true; // prevent hard crash on some platforms
+    };
 
-  runApp(const MyApp());
+    // Initialize Firebase
+    // Web build in this repo is not configured with FlutterFire options.
+    // Skip Firebase init on web so the app can run in Chrome for UI testing.
+    if (!kIsWeb) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+
+    // Initialize Storage Service
+    await Get.putAsync(() => StorageService().init());
+
+    runApp(const MyApp());
+  }, (error, stack) {
+    FlutterError.dumpErrorToConsole(
+      FlutterErrorDetails(exception: error, stack: stack),
+    );
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -31,7 +57,7 @@ class MyApp extends StatelessWidget {
       // Theme
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
 
       // Initial Binding
       initialBinding: InitialBinding(),

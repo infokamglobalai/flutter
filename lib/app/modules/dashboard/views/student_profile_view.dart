@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentProfileView extends GetView<DashboardController> {
   const StudentProfileView({super.key});
@@ -60,6 +62,17 @@ class StudentProfileView extends GetView<DashboardController> {
   }
 
   Widget _buildProfileCard(dynamic profile, dynamic user) {
+    String resolveAvatarUrl(String? raw) {
+      final v = (raw ?? '').toString().trim();
+      if (v.isEmpty) return '';
+      if (v.startsWith('http://') || v.startsWith('https://')) return v;
+      if (v.startsWith('/uploads/')) return 'https://lms.eduaitutors.com$v';
+      if (v.startsWith('uploads/')) return 'https://lms.eduaitutors.com/$v';
+      return 'https://lms.eduaitutors.com/uploads/$v';
+    }
+
+    final avatarUrl = resolveAvatarUrl(user?.avatar?.toString());
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -90,10 +103,24 @@ class StudentProfileView extends GetView<DashboardController> {
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 40,
-                  color: AppTheme.primaryColor,
+                child: ClipOval(
+                  child: avatarUrl.isEmpty
+                      ? Icon(
+                          Icons.person_rounded,
+                          size: 40,
+                          color: AppTheme.primaryColor,
+                        )
+                      : Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person_rounded,
+                              size: 40,
+                              color: AppTheme.primaryColor,
+                            );
+                          },
+                        ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -236,6 +263,9 @@ class StudentProfileView extends GetView<DashboardController> {
     final lastNameController = TextEditingController(text: lastNameStr);
     final phoneController = TextEditingController(text: user.phone ?? '');
 
+    XFile? picked;
+    final picker = ImagePicker();
+
     Get.bottomSheet(
       Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(Get.context!).viewInsets.bottom),
@@ -271,6 +301,94 @@ class StudentProfileView extends GetView<DashboardController> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                StatefulBuilder(
+                  builder: (context, setModalState) {
+                    String resolveAvatarUrl(String? raw) {
+                      final v = (raw ?? '').toString().trim();
+                      if (v.isEmpty) return '';
+                      if (v.startsWith('http://') || v.startsWith('https://')) {
+                        return v;
+                      }
+                      if (v.startsWith('/uploads/')) {
+                        return 'https://lms.eduaitutors.com$v';
+                      }
+                      if (v.startsWith('uploads/')) {
+                        return 'https://lms.eduaitutors.com/$v';
+                      }
+                      return 'https://lms.eduaitutors.com/uploads/$v';
+                    }
+
+                    final currentAvatarUrl = picked != null
+                        ? picked!.path
+                        : resolveAvatarUrl(user.avatar?.toString());
+
+                    return Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.grey[100],
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: ClipOval(
+                            child: picked != null
+                                ? Image.network(
+                                    picked!.path,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => Icon(
+                                      Icons.person_rounded,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                  )
+                                : (currentAvatarUrl.isEmpty
+                                    ? Icon(
+                                        Icons.person_rounded,
+                                        color: AppTheme.primaryColor,
+                                      )
+                                    : Image.network(
+                                        currentAvatarUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (c, e, s) => Icon(
+                                          Icons.person_rounded,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      )),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Obx(() {
+                            final busy = controller.isUpdatingProfilePicture.value;
+                            return OutlinedButton.icon(
+                              onPressed: busy
+                                  ? null
+                                  : () async {
+                                      final img = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                        imageQuality: 85,
+                                      );
+                                      if (img == null) return;
+                                      setModalState(() => picked = img);
+                                      await controller.updateProfilePicture(img);
+                                    },
+                              icon: busy
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.photo_camera_back_rounded),
+                              label: Text(busy ? 'Uploading…' : 'Change photo'),
+                            );
+                          }),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: firstNameController,
                   decoration: InputDecoration(
@@ -607,8 +725,8 @@ class StudentProfileView extends GetView<DashboardController> {
             iconBgColor: const Color(0xFFEDE9FE),
             title: 'My Packages',
             onTap: () {
-              // Navigate to packages view
-              Get.toNamed('/all-packages');
+              // Show only enrolled packages (subscriptions)
+              Get.toNamed(Routes.MY_SUBSCRIPTIONS);
             },
           ),
           _buildDivider(),
@@ -619,7 +737,7 @@ class StudentProfileView extends GetView<DashboardController> {
             title: 'My Progress',
             onTap: () {
               // Navigate to student progress view
-              Get.toNamed('/student-progress');
+              Get.toNamed(Routes.STUDENT_PROGRESS);
             },
           ),
           _buildDivider(),

@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/services/fcm_service.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsController extends GetxController {
@@ -7,6 +10,8 @@ class SettingsController extends GetxController {
   final emailNotifications = true.obs;
   final reminderAlerts = true.obs;
   final darkMode = false.obs;
+
+  FCMService? _fcmService;
 
   // Preference keys
   static const String _pushNotificationsKey = 'push_notifications';
@@ -17,6 +22,11 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // FCMService should be registered at app start. If it's not, we still keep
+    // the Settings screen functional (push toggle will just persist locally).
+    if (Get.isRegistered<FCMService>()) {
+      _fcmService = Get.find<FCMService>();
+    }
     loadSettings();
   }
 
@@ -28,8 +38,11 @@ class SettingsController extends GetxController {
       emailNotifications.value = prefs.getBool(_emailNotificationsKey) ?? true;
       reminderAlerts.value = prefs.getBool(_reminderAlertsKey) ?? true;
       darkMode.value = prefs.getBool(_darkModeKey) ?? false;
+
+      // Apply persisted theme on launch.
+      Get.changeThemeMode(darkMode.value ? ThemeMode.dark : ThemeMode.light);
     } catch (e) {
-      print('Error loading settings: $e');
+      // Best-effort; keep defaults.
     }
   }
 
@@ -39,6 +52,44 @@ class SettingsController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_pushNotificationsKey, value);
 
+      if (value) {
+        final fcm = _fcmService;
+        if (fcm == null) {
+          Get.snackbar(
+            'Push Notifications',
+            'Notification service not ready yet. Please try again.',
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 3),
+          );
+          return;
+        }
+
+        final granted = await fcm.requestNotificationPermission();
+        if (!granted) {
+          // Permission denied → revert toggle so UI reflects reality.
+          pushNotifications.value = false;
+          await prefs.setBool(_pushNotificationsKey, false);
+          Get.snackbar(
+            'Push Notifications',
+            'Permission denied. Enable notifications in device settings.',
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 3),
+          );
+          return;
+        }
+        // Ensure FCM is initialized and token is available.
+        await fcm.initializeFCM();
+        await fcm.sendTokenAfterLogin();
+      } else {
+        final fcm = _fcmService;
+        if (fcm == null) {
+          return;
+        }
+        // Best-effort: remove token so backend stops sending pushes.
+        await fcm.removeTokenOnLogout();
+        await fcm.deleteToken();
+      }
+
       Get.snackbar(
         'Push Notifications',
         value ? 'Push notifications enabled' : 'Push notifications disabled',
@@ -46,7 +97,7 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      print('Error saving push notifications setting: $e');
+      // Best-effort; keep UI responsive.
     }
   }
 
@@ -63,7 +114,7 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      print('Error saving email notifications setting: $e');
+      // Best-effort.
     }
   }
 
@@ -80,7 +131,7 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      print('Error saving reminder alerts setting: $e');
+      // Best-effort.
     }
   }
 
@@ -97,50 +148,33 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // You can implement theme switching here if needed
-      // Get.changeThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+      // Apply theme immediately.
+      Get.changeThemeMode(value ? ThemeMode.dark : ThemeMode.light);
     } catch (e) {
-      print('Error saving dark mode setting: $e');
+      // Best-effort.
     }
   }
 
   void navigateToPersonalInformation() {
-    Get.snackbar(
-      'Personal Information',
-      'This feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    Get.toNamed(Routes.STUDENT_PROFILE);
   }
 
   void navigateToChangeEmail() {
-    Get.snackbar(
-      'Change Email',
-      'This feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    // Email is part of profile identity; show profile screen.
+    Get.toNamed(Routes.STUDENT_PROFILE);
   }
 
   void navigateToChangePassword() {
-    Get.snackbar(
-      'Change Password',
-      'This feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    // Uses OTP flow in-app.
+    Get.toNamed(Routes.FORGOT_PASSWORD);
   }
 
   void navigateToHelpSupport() {
-    Get.snackbar(
-      'Help & Support',
-      'This feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    Get.toNamed(Routes.STUDENT_SUPPORT);
   }
 
   void navigateToAboutUs() {
-    Get.snackbar(
-      'About Us',
-      'This feature will be available soon',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    // Keep it simple: route to support entry which includes app info/help.
+    Get.toNamed(Routes.STUDENT_SUPPORT);
   }
 }

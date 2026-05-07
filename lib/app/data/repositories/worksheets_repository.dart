@@ -28,7 +28,7 @@ class WorksheetsRepository {
       };
 
       final response = await _apiClient.get(
-        '/worksheets',
+        ApiConstants.worksheets,
         queryParameters: queryParameters,
       );
 
@@ -47,7 +47,7 @@ class WorksheetsRepository {
   /// Fetch a single worksheet by ID
   Future<WorksheetModel> getWorksheetById(String id) async {
     try {
-      final response = await _apiClient.get('/worksheets/$id');
+      final response = await _apiClient.get(ApiConstants.worksheetById(id));
 
       if (response.data['success'] == true) {
         return WorksheetModel.fromJson(response.data['data']);

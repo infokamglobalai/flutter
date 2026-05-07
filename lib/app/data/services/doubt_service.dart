@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' as getx;
+import 'package:najahapp/app/core/constants/api_constants.dart';
 import '../../core/services/api_service.dart';
 import '../models/doubt_model.dart';
 
 class DoubtService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = getx.Get.find<ApiService>();
 
   /// Create a new doubt (ticket)
   Future<Map<String, dynamic>> createDoubt({
@@ -16,7 +17,7 @@ class DoubtService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/tickets',
+        ApiConstants.tickets,
         data: {
           'category': 'subjectRelated',
           'subject': subject,
@@ -75,7 +76,7 @@ class DoubtService {
       if (search != null) queryParams['search'] = search;
 
       final response = await _apiService.get(
-        '/tickets',
+        ApiConstants.tickets,
         queryParameters: queryParams,
       );
 
@@ -114,7 +115,7 @@ class DoubtService {
   /// Get a single doubt by ID with all responses
   Future<Map<String, dynamic>> getDoubtById(String doubtId) async {
     try {
-      final response = await _apiService.get('/tickets/$doubtId');
+      final response = await _apiService.get(ApiConstants.ticketById(doubtId));
 
       if (response.data['success'] == true) {
         return {
@@ -147,7 +148,7 @@ class DoubtService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/tickets/$doubtId/responses',
+        ApiConstants.ticketResponses(doubtId),
         data: {
           'message': message,
           'isInternal': false,
@@ -182,7 +183,7 @@ class DoubtService {
   /// Get ticket statistics
   Future<Map<String, dynamic>> getStats() async {
     try {
-      final response = await _apiService.get('/tickets/stats');
+      final response = await _apiService.get(ApiConstants.ticketStats);
 
       if (response.data['success'] == true) {
         return {

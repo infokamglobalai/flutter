@@ -25,7 +25,7 @@ class Ticket {
   final TicketStatus status;
   final TicketPriority priority;
   final List<TicketResponse> responses;
-  final String? attachmentPath;
+  final List<TicketAttachment> attachments;
   final Map<String, dynamic>? metadata;
 
   Ticket({
@@ -38,26 +38,65 @@ class Ticket {
     required this.status,
     required this.priority,
     this.responses = const [],
-    this.attachmentPath,
+    this.attachments = const [],
     this.metadata,
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic v) {
+      if (v is DateTime) return v;
+      if (v is String) return DateTime.tryParse(v) ?? DateTime.now();
+      return DateTime.now();
+    }
+
     return Ticket(
-      id: json['_id'] as String,
-      ticketNumber: json['ticketNumber'] as String,
-      category: TicketService.categoryFromApi(json['category'] as String),
-      subject: json['subject'] as String,
-      description: json['description'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      status: TicketService.statusFromApi(json['status'] as String),
-      priority: TicketService.priorityFromApi(json['priority'] as String),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      ticketNumber: (json['ticketNumber'] ?? '').toString(),
+      category: TicketService.categoryFromApi(
+        (json['category'] ?? 'other').toString(),
+      ),
+      subject: (json['subject'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      createdAt: parseDate(json['createdAt']),
+      status: TicketService.statusFromApi((json['status'] ?? 'open').toString()),
+      priority:
+          TicketService.priorityFromApi((json['priority'] ?? 'medium').toString()),
       responses:
           (json['responses'] as List<dynamic>?)
               ?.map((r) => TicketResponse.fromJson(r as Map<String, dynamic>))
               .toList() ??
           [],
-      metadata: json['metadata'] as Map<String, dynamic>?,
+      attachments:
+          (json['attachments'] as List<dynamic>?)
+              ?.map((a) => TicketAttachment.fromJson(a as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      metadata: (json['metadata'] is Map)
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
+    );
+  }
+}
+
+class TicketAttachment {
+  final String fileName;
+  final String fileUrl;
+  final String fileType;
+  final int fileSize;
+
+  TicketAttachment({
+    required this.fileName,
+    required this.fileUrl,
+    required this.fileType,
+    required this.fileSize,
+  });
+
+  factory TicketAttachment.fromJson(Map<String, dynamic> json) {
+    return TicketAttachment(
+      fileName: json['fileName']?.toString() ?? 'attachment',
+      fileUrl: json['fileUrl']?.toString() ?? '',
+      fileType: json['fileType']?.toString() ?? '',
+      fileSize: (json['fileSize'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -80,14 +119,18 @@ class TicketResponse {
   });
 
   factory TicketResponse.fromJson(Map<String, dynamic> json) {
-    final userId = json['userId'] as Map<String, dynamic>;
+    final userIdRaw = json['userId'];
+    final userId = (userIdRaw is Map)
+        ? Map<String, dynamic>.from(userIdRaw)
+        : <String, dynamic>{};
     return TicketResponse(
-      id: json['_id'] as String,
-      message: json['message'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      message: (json['message'] ?? '').toString(),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()) ??
+          DateTime.now(),
       isStaffResponse: json['isStaffResponse'] as bool? ?? false,
-      userEmail: userId['email'] as String? ?? '',
-      userName: '${userId['firstName'] ?? ''} ${userId['lastName'] ?? ''}'
+      userEmail: (userId['email'] ?? '').toString(),
+      userName: '${(userId['firstName'] ?? '').toString()} ${(userId['lastName'] ?? '').toString()}'
           .trim(),
     );
   }
@@ -109,7 +152,8 @@ class TicketController extends GetxController {
   late final TextEditingController subjectController;
   late final TextEditingController descriptionController;
   late final TextEditingController responseController;
-  final attachmentPath = Rx<String?>(null);
+  final imagePaths = <String>[].obs;
+  final videoPath = RxnString();
 
   @override
   void onInit() {
@@ -250,10 +294,9 @@ class TicketController extends GetxController {
         category: TicketService.categoryToApi(selectedCategory.value!),
         subject: subjectController.text.trim(),
         description: descriptionController.text.trim(),
-        metadata: {
-          if (attachmentPath.value != null)
-            'attachmentPath': attachmentPath.value,
-        },
+        metadata: {},
+        imagePaths: imagePaths.toList(),
+        videoPath: videoPath.value,
       );
 
       if (response['success'] == true) {
@@ -275,7 +318,8 @@ class TicketController extends GetxController {
         selectedCategory.value = null;
         subjectController.clear();
         descriptionController.clear();
-        attachmentPath.value = null;
+        imagePaths.clear();
+        videoPath.value = null;
       }
     } catch (e) {
       Get.snackbar(
@@ -288,6 +332,21 @@ class TicketController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  void setImages(List<String> paths) {
+    videoPath.value = null; // enforce mutually exclusive
+    imagePaths.assignAll(paths.take(3));
+  }
+
+  void setVideo(String path) {
+    imagePaths.clear(); // enforce mutually exclusive
+    videoPath.value = path;
+  }
+
+  void clearAttachments() {
+    imagePaths.clear();
+    videoPath.value = null;
   }
 
   // Statistics

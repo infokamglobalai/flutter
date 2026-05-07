@@ -1,3 +1,6 @@
+// ignore_for_file: constant_identifier_names
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/middlewares/auth_middleware.dart';
 import 'package:najahapp/app/modules/auth/bindings/auth_binding.dart';
@@ -38,17 +41,30 @@ import 'package:najahapp/app/modules/parent/views/parent_dashboard_view.dart';
 import 'package:najahapp/app/modules/parent/controllers/parent_dashboard_controller.dart';
 import 'package:najahapp/app/modules/parent/views/kid_detailed_progress_view.dart';
 import 'package:najahapp/app/modules/parent/controllers/kid_detailed_progress_controller.dart';
-import 'package:najahapp/app/modules/mentor/views/mentor_dashboard_view.dart';
-import 'package:najahapp/app/modules/mentor/controllers/mentor_dashboard_controller.dart';
 import 'package:najahapp/app/modules/guest/views/guest_dashboard_view.dart';
 import 'package:najahapp/app/modules/guest/bindings/guest_dashboard_binding.dart';
+import 'package:najahapp/app/modules/mentor/views/mentor_dashboard_view.dart';
+import 'package:najahapp/app/modules/mentor/controllers/mentor_dashboard_controller.dart';
+import 'package:najahapp/app/modules/mentor/views/mentor_notifications_view.dart';
+import 'package:najahapp/app/modules/mentor/views/mentor_qna_chat_view.dart';
+import 'package:najahapp/app/data/models/qna_model.dart';
 import 'package:najahapp/app/modules/learning/views/custom_assessment_config_view.dart';
 import 'package:najahapp/app/modules/learning/views/custom_assessment_view.dart';
 import 'package:najahapp/app/modules/learning/controllers/custom_assessment_controller.dart';
+import 'package:najahapp/app/modules/learning/views/public_assessments_view.dart';
+import 'package:najahapp/app/modules/learning/views/public_assessment_attempt_view.dart';
+import 'package:najahapp/app/modules/learning/views/public_assessment_result_view.dart';
+import 'package:najahapp/app/modules/learning/controllers/public_assessments_controller.dart';
+import 'package:najahapp/app/modules/learning/controllers/public_assessment_attempt_controller.dart';
+import 'package:najahapp/app/modules/learning/controllers/public_assessment_result_controller.dart';
 import 'package:najahapp/app/modules/learning/views/downloads_view.dart';
 import 'package:najahapp/app/modules/learning/controllers/downloads_controller.dart';
 import 'package:najahapp/app/modules/learning/views/qa_view.dart';
 import 'package:najahapp/app/modules/learning/controllers/qa_controller.dart';
+import 'package:najahapp/app/modules/learning/views/student_qna_threads_view.dart';
+import 'package:najahapp/app/modules/learning/views/student_qna_thread_view.dart';
+import 'package:najahapp/app/modules/learning/controllers/student_qna_threads_controller.dart';
+import 'package:najahapp/app/modules/learning/controllers/student_qna_thread_controller.dart';
 import 'package:najahapp/app/modules/learning/views/brain_games_view.dart';
 import 'package:najahapp/app/modules/learning/controllers/brain_games_controller.dart';
 import 'package:najahapp/app/modules/learning/views/mentor_chat_view.dart';
@@ -77,6 +93,40 @@ import 'package:najahapp/app/modules/learning/views/self_assessment_list_view.da
 import 'package:najahapp/app/modules/learning/views/self_assessment_attempt_view.dart';
 import 'package:najahapp/app/modules/learning/views/self_assessment_result_view.dart';
 import 'package:najahapp/app/modules/learning/controllers/self_assessment_controller.dart';
+import 'package:najahapp/app/modules/mocktests/bindings/mocktests_binding.dart';
+import 'package:najahapp/app/modules/mocktests/views/mocktest_attempt_view.dart';
+import 'package:najahapp/app/modules/mocktests/views/mocktest_result_view.dart';
+import 'package:najahapp/app/modules/mocktests/views/student_mocktests_view.dart';
+import 'package:najahapp/app/modules/learning/controllers/free_content_controller.dart';
+import 'package:najahapp/app/modules/learning/views/free_content_view.dart';
+import 'package:najahapp/app/modules/dashboard/views/student_reports_view.dart';
+import 'package:najahapp/app/modules/learning/views/ai_counsellor_view.dart';
+import 'package:najahapp/app/modules/learning/controllers/ai_counsellor_controller.dart';
+import 'package:najahapp/app/modules/dashboard/views/student_ai_chat_history_view.dart';
+import 'package:najahapp/app/modules/dashboard/controllers/student_ai_chat_history_controller.dart';
+import 'package:najahapp/app/modules/exercises/controllers/chapter_exercises_controller.dart';
+import 'package:najahapp/app/modules/exercises/controllers/exercise_attempt_controller.dart';
+import 'package:najahapp/app/modules/exercises/views/chapter_exercises_view.dart';
+import 'package:najahapp/app/modules/exercises/views/exercise_attempt_view.dart';
+import 'package:najahapp/app/modules/exercises/views/exercises_list_view.dart';
+import 'package:najahapp/app/modules/dashboard/views/student_support_entry_view.dart';
+import 'package:najahapp/app/modules/dashboard/controllers/student_detailed_report_controller.dart';
+import 'package:najahapp/app/modules/dashboard/views/student_detailed_report_view.dart';
+import 'package:najahapp/app/modules/subscriptions/controllers/student_package_details_entry_controller.dart';
+import 'package:najahapp/app/modules/subscriptions/views/student_package_details_entry_view.dart';
+import 'package:najahapp/app/modules/learning/views/student_chapter_entry_view.dart';
+import 'package:najahapp/app/modules/learning/views/student_package_chapter_entry_view.dart';
+import 'package:najahapp/app/modules/packages/views/student_grade_subjects_entry_view.dart';
+import 'package:najahapp/app/modules/packages/views/student_grade_subject_chapters_entry_view.dart';
+import 'package:najahapp/app/modules/packages/views/student_grade_subject_chapter_entry_view.dart';
+import 'package:najahapp/app/modules/dashboard/views/student_reports_redirect_view.dart';
+import 'package:najahapp/app/modules/packages/views/student_test_your_knowledge_redirect_view.dart';
+import 'package:najahapp/app/modules/mocktests/views/student_mocktest_attempt_entry_view.dart';
+import 'package:najahapp/app/modules/mocktests/views/student_mocktest_result_entry_view.dart';
+import 'package:najahapp/app/modules/exercises/views/student_exercises_entry_view.dart';
+import 'package:najahapp/app/modules/exercises/views/student_chapter_exercises_entry_view.dart';
+import 'package:najahapp/app/modules/mocktests/views/student_package_mocktests_entry_view.dart';
+import 'package:najahapp/app/modules/learning/views/student_content_test_page_entry_view.dart';
 
 part 'app_routes.dart';
 
@@ -121,6 +171,12 @@ class AppPages {
       name: _Paths.DASHBOARD,
       page: () => const DashboardView(),
       binding: DashboardBinding(),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_DASHBOARD_WEB,
+      page: () => const DashboardView(),
+      binding: DashboardBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.STUDENT_PROFILE,
@@ -205,6 +261,12 @@ class AppPages {
       middlewares: [AuthMiddleware()],
     ),
     GetPage(
+      name: _Paths.STUDENT_PROFILE_WEB,
+      page: () => const ProfileView(),
+      binding: ProfileBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
       name: _Paths.SETTINGS,
       page: () => const SettingsView(),
       binding: SettingsBinding(),
@@ -212,6 +274,12 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.NOTIFICATIONS,
+      page: () => const NotificationsView(),
+      binding: NotificationsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_NOTIFICATIONS_WEB,
       page: () => const NotificationsView(),
       binding: NotificationsBinding(),
       middlewares: [AuthMiddleware()],
@@ -278,6 +346,33 @@ class AppPages {
       // middlewares: [AuthMiddleware()],
     ),
     GetPage(
+      name: _Paths.PUBLIC_ASSESSMENTS,
+      page: () => const PublicAssessmentsView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<PublicAssessmentsController>(
+          () => PublicAssessmentsController(),
+        );
+      }),
+    ),
+    GetPage(
+      name: _Paths.PUBLIC_ASSESSMENT_ATTEMPT,
+      page: () => const PublicAssessmentAttemptView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<PublicAssessmentAttemptController>(
+          () => PublicAssessmentAttemptController(),
+        );
+      }),
+    ),
+    GetPage(
+      name: _Paths.PUBLIC_ASSESSMENT_RESULT,
+      page: () => const PublicAssessmentResultView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<PublicAssessmentResultController>(
+          () => PublicAssessmentResultController(),
+        );
+      }),
+    ),
+    GetPage(
       name: _Paths.PROMOTIONAL_VIDEO_PLAYER,
       page: () => const PromotionalVideoPlayerView(),
     ),
@@ -324,16 +419,6 @@ class AppPages {
       }),
     ),
     GetPage(
-      name: _Paths.MENTOR_DASHBOARD,
-      page: () => const MentorDashboardView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<MentorDashboardController>(
-          () => MentorDashboardController(),
-        );
-      }),
-      // middlewares: [AuthMiddleware()],
-    ),
-    GetPage(
       name: _Paths.GUEST_DASHBOARD,
       page: () => const GuestDashboardView(),
       binding: GuestDashboardBinding(),
@@ -371,11 +456,52 @@ class AppPages {
       }),
     ),
     GetPage(
+      name: _Paths.STUDENT_AI_QA_WEB,
+      page: () => const QAView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<QAController>(() => QAController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_QNA_THREADS,
+      page: () => const StudentQnaThreadsView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StudentQnaThreadsController>(
+          () => StudentQnaThreadsController(),
+        );
+      }),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_QNA_THREAD,
+      page: () => const StudentQnaThreadView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StudentQnaThreadController>(
+          () => StudentQnaThreadController(),
+        );
+      }),
+    ),
+    GetPage(
       name: _Paths.BRAIN_GAMES,
       page: () => const BrainGamesView(),
       binding: BindingsBuilder(() {
-        Get.lazyPut<BrainGamesController>(() => BrainGamesController());
+        // Defensive registrations: BrainGames depends on storage services.
+        if (!Get.isRegistered<BrainGamesStorageService>()) {
+          Get.put(BrainGamesStorageService(), permanent: true);
+        }
+        Get.lazyPut<BrainGamesController>(() => BrainGamesController(), fenix: true);
       }),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_GAMES_WEB,
+      page: () => const BrainGamesView(),
+      binding: BindingsBuilder(() {
+        if (!Get.isRegistered<BrainGamesStorageService>()) {
+          Get.put(BrainGamesStorageService(), permanent: true);
+        }
+        Get.lazyPut<BrainGamesController>(() => BrainGamesController(), fenix: true);
+      }),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.MENTOR_CHAT,
@@ -383,14 +509,66 @@ class AppPages {
       binding: MentorChatBinding(),
     ),
     GetPage(
+      name: _Paths.MENTOR_DASHBOARD,
+      page: () => const MentorDashboardView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<MentorDashboardController>(() => MentorDashboardController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.MENTOR_NOTIFICATIONS,
+      page: () => const MentorNotificationsView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<MentorDashboardController>(() => MentorDashboardController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.MENTOR_QNA,
+      page: () {
+        final args = Get.arguments;
+        if (args is QnaThread) {
+          return MentorQnaChatView(thread: args);
+        }
+        // Fallback: show an empty scaffold so navigation doesn't crash
+        // if called without arguments.
+        return const Scaffold(
+          body: Center(child: Text('Missing QnA thread')),
+        );
+      },
+      binding: BindingsBuilder(() {
+        Get.lazyPut<MentorDashboardController>(() => MentorDashboardController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_MENTOR_CHAT_WEB,
+      page: () => const MentorChatView(),
+      binding: MentorChatBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
       name: _Paths.STUDENT_COACHING,
       page: () => const StudentCoachingView(),
       binding: StudentCoachingBinding(),
     ),
     GetPage(
+      name: _Paths.STUDENT_COACHING_WEB,
+      page: () => const StudentCoachingView(),
+      binding: StudentCoachingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
       name: _Paths.WORKSHEETS,
       page: () => const WorksheetsView(),
       binding: WorksheetsBinding(),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_WORKSHEETS_WEB,
+      page: () => const WorksheetsView(),
+      binding: WorksheetsBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.WATCH_HISTORY,
@@ -416,6 +594,12 @@ class AppPages {
       name: _Paths.PAYMENT_HISTORY,
       page: () => const PaymentHistoryView(),
       binding: PaymentHistoryBinding(),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PAYMENT_HISTORY_WEB,
+      page: () => const PaymentHistoryView(),
+      binding: PaymentHistoryBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.MY_SUBSCRIPTIONS,
@@ -446,6 +630,228 @@ class AppPages {
       name: _Paths.SELF_ASSESSMENT_RESULT,
       page: () => const SelfAssessmentResultView(),
       // Controller already put by list route (fenix: true)
+    ),
+    GetPage(
+      name: _Paths.STUDENT_MOCKTESTS,
+      page: () => const StudentMocktestsView(),
+      binding: StudentMocktestsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.MOCKTEST_ATTEMPT,
+      page: () => const MocktestAttemptView(),
+      binding: MocktestAttemptBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.MOCKTEST_RESULT,
+      page: () => const MocktestResultView(),
+      binding: MocktestResultBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.FREE_CONTENT,
+      page: () => const FreeContentView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<FreeContentController>(() => FreeContentController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_REPORTS,
+      page: () => const StudentReportsView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_AI_CHAT_HISTORY,
+      page: () => const StudentAiChatHistoryView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StudentAiChatHistoryController>(
+          () => StudentAiChatHistoryController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_AI_COUNSELLOR,
+      page: () => const AiCounsellorView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<AiCounsellorController>(() => AiCounsellorController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.EXERCISES,
+      page: () => const ExercisesListView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.CHAPTER_EXERCISES,
+      page: () => const ChapterExercisesView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ChapterExercisesController>(() => ChapterExercisesController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.EXERCISE_ATTEMPT,
+      page: () => const ExerciseAttemptView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ExerciseAttemptController>(() => ExerciseAttemptController());
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.CONTENT_TEST_PAGE,
+      page: () => const learning_video.VideoPlayerView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<learning.VideoPlayerController>(
+          () => learning.VideoPlayerController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_CHAPTER_PLAYER,
+      page: () => const learning_video.VideoPlayerView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<learning.VideoPlayerController>(
+          () => learning.VideoPlayerController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.PACKAGE_CHAPTER_PLAYER,
+      page: () => const learning_video.VideoPlayerView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<learning.VideoPlayerController>(
+          () => learning.VideoPlayerController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_SUPPORT,
+      page: () => const StudentSupportEntryView(),
+      binding: DashboardBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_SUPPORT_WEB,
+      page: () => const StudentSupportEntryView(),
+      binding: DashboardBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_REPORTS_WEB,
+      page: () => const StudentReportsRedirectView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_TEST_YOUR_KNOWLEDGE_WEB,
+      page: () => const StudentTestYourKnowledgeRedirectView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_MOCKTEST_ATTEMPT_WEB,
+      page: () => const StudentMocktestAttemptEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_MOCKTEST_RESULT_WEB,
+      page: () => const StudentMocktestResultEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_EXERCISES_WEB,
+      page: () => const StudentExercisesEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_EXERCISES_CHAPTER_WEB,
+      page: () => const StudentChapterExercisesEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGES_MOCKTESTS_WEB,
+      page: () => const StudentPackageMocktestsEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_CONTENT_TEST_PAGE_WEB,
+      page: () => const StudentContentTestPageEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PROGRESS_BY_STUDENT_WEB,
+      page: () => const StudentProgressView(),
+      binding: DashboardBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_DETAILED_REPORT,
+      page: () => const StudentDetailedReportView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StudentDetailedReportController>(
+          () => StudentDetailedReportController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGES,
+      page: () => const MySubscriptionsView(),
+      binding: MySubscriptionsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGES_SELECT,
+      page: () => const PackageSelectionView(),
+      binding: PackageBinding(),
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGES_CART,
+      page: () => const CartView(),
+      binding: PackageBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGE_DETAILS,
+      page: () => const StudentPackageDetailsEntryView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StudentPackageDetailsEntryController>(
+          () => StudentPackageDetailsEntryController(),
+        );
+      }),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_PACKAGE_CHAPTER,
+      page: () => const StudentPackageChapterEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_CHAPTER,
+      page: () => const StudentChapterEntryView(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_GRADE_SUBJECTS,
+      page: () => const StudentGradeSubjectsEntryView(),
+      binding: PackageBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_GRADE_SUBJECT_CHAPTERS,
+      page: () => const StudentGradeSubjectChaptersEntryView(),
+      binding: PackageBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.STUDENT_GRADE_SUBJECT_CHAPTER,
+      page: () => const StudentGradeSubjectChapterEntryView(),
+      middlewares: [AuthMiddleware()],
     ),
   ];
 }

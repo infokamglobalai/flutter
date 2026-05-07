@@ -40,7 +40,6 @@ abstract class Routes {
   static const FULL_ASSESSMENT = _Paths.FULL_ASSESSMENT;
   static const PARENT_DASHBOARD = _Paths.PARENT_DASHBOARD;
   static const KID_DETAILED_PROGRESS = _Paths.KID_DETAILED_PROGRESS;
-  static const MENTOR_DASHBOARD = _Paths.MENTOR_DASHBOARD;
   static const STUDENT_PROFILE = _Paths.STUDENT_PROFILE;
   static const STUDENT_PROGRESS = _Paths.STUDENT_PROGRESS;
   static const GUEST_DASHBOARD = _Paths.GUEST_DASHBOARD;
@@ -48,8 +47,13 @@ abstract class Routes {
   static const CUSTOM_ASSESSMENT = _Paths.CUSTOM_ASSESSMENT;
   static const DOWNLOADS = _Paths.DOWNLOADS;
   static const QA = _Paths.QA;
+  static const STUDENT_QNA_THREADS = _Paths.STUDENT_QNA_THREADS;
+  static const STUDENT_QNA_THREAD = _Paths.STUDENT_QNA_THREAD;
   static const BRAIN_GAMES = _Paths.BRAIN_GAMES;
   static const MENTOR_CHAT = _Paths.MENTOR_CHAT;
+  static const MENTOR_DASHBOARD = _Paths.MENTOR_DASHBOARD;
+  static const MENTOR_NOTIFICATIONS = _Paths.MENTOR_NOTIFICATIONS;
+  static const MENTOR_QNA = _Paths.MENTOR_QNA;
   static const STUDENT_COACHING = _Paths.STUDENT_COACHING;
   static const WORKSHEETS = _Paths.WORKSHEETS;
   static const WATCH_HISTORY = _Paths.WATCH_HISTORY;
@@ -60,9 +64,59 @@ abstract class Routes {
   static const ALL_PACKAGES = _Paths.ALL_PACKAGES;
   static const ASSESSMENT = _Paths.ASSESSMENT;
   static const ASSESSMENT_RESULT = _Paths.ASSESSMENT_RESULT;
+  static const PUBLIC_ASSESSMENTS = _Paths.PUBLIC_ASSESSMENTS;
+  static const PUBLIC_ASSESSMENT_ATTEMPT = _Paths.PUBLIC_ASSESSMENT_ATTEMPT;
+  static const PUBLIC_ASSESSMENT_RESULT = _Paths.PUBLIC_ASSESSMENT_RESULT;
   static const SELF_ASSESSMENT_LIST = _Paths.SELF_ASSESSMENT_LIST;
   static const SELF_ASSESSMENT_ATTEMPT = _Paths.SELF_ASSESSMENT_ATTEMPT;
   static const SELF_ASSESSMENT_RESULT = _Paths.SELF_ASSESSMENT_RESULT;
+  static const STUDENT_MOCKTESTS = _Paths.STUDENT_MOCKTESTS;
+  static const MOCKTEST_ATTEMPT = _Paths.MOCKTEST_ATTEMPT;
+  static const MOCKTEST_RESULT = _Paths.MOCKTEST_RESULT;
+  static const FREE_CONTENT = _Paths.FREE_CONTENT;
+  static const STUDENT_REPORTS = _Paths.STUDENT_REPORTS;
+  static const STUDENT_AI_CHAT_HISTORY = _Paths.STUDENT_AI_CHAT_HISTORY;
+  static const STUDENT_AI_COUNSELLOR = _Paths.STUDENT_AI_COUNSELLOR;
+  static const EXERCISES = _Paths.EXERCISES;
+  static const CHAPTER_EXERCISES = _Paths.CHAPTER_EXERCISES;
+  static const EXERCISE_ATTEMPT = _Paths.EXERCISE_ATTEMPT;
+  static const CONTENT_TEST_PAGE = _Paths.CONTENT_TEST_PAGE;
+  static const STUDENT_CHAPTER_PLAYER = _Paths.STUDENT_CHAPTER_PLAYER;
+  static const PACKAGE_CHAPTER_PLAYER = _Paths.PACKAGE_CHAPTER_PLAYER;
+  static const STUDENT_SUPPORT = _Paths.STUDENT_SUPPORT;
+  static const STUDENT_DETAILED_REPORT = _Paths.STUDENT_DETAILED_REPORT;
+  static const STUDENT_PACKAGES = _Paths.STUDENT_PACKAGES;
+  static const STUDENT_PACKAGES_SELECT = _Paths.STUDENT_PACKAGES_SELECT;
+  static const STUDENT_PACKAGES_CART = _Paths.STUDENT_PACKAGES_CART;
+  static const STUDENT_PACKAGE_DETAILS = _Paths.STUDENT_PACKAGE_DETAILS;
+  static const STUDENT_PACKAGE_CHAPTER = _Paths.STUDENT_PACKAGE_CHAPTER;
+  static const STUDENT_CHAPTER = _Paths.STUDENT_CHAPTER;
+  static const STUDENT_GRADE_SUBJECTS = _Paths.STUDENT_GRADE_SUBJECTS;
+  static const STUDENT_GRADE_SUBJECT_CHAPTERS = _Paths.STUDENT_GRADE_SUBJECT_CHAPTERS;
+  static const STUDENT_GRADE_SUBJECT_CHAPTER = _Paths.STUDENT_GRADE_SUBJECT_CHAPTER;
+
+  // Web student-panel alias routes (deep-link parity)
+  static const STUDENT_DASHBOARD_WEB = _Paths.STUDENT_DASHBOARD_WEB;
+  static const STUDENT_PROFILE_WEB = _Paths.STUDENT_PROFILE_WEB;
+  static const STUDENT_PROGRESS_WEB = _Paths.STUDENT_PROGRESS_WEB;
+  static const STUDENT_WORKSHEETS_WEB = _Paths.STUDENT_WORKSHEETS_WEB;
+  static const STUDENT_AI_QA_WEB = _Paths.STUDENT_AI_QA_WEB;
+  static const STUDENT_COACHING_WEB = _Paths.STUDENT_COACHING_WEB;
+  static const STUDENT_MENTOR_CHAT_WEB = _Paths.STUDENT_MENTOR_CHAT_WEB;
+  static const STUDENT_GAMES_WEB = _Paths.STUDENT_GAMES_WEB;
+  static const STUDENT_SUPPORT_WEB = _Paths.STUDENT_SUPPORT_WEB;
+  static const STUDENT_NOTIFICATIONS_WEB = _Paths.STUDENT_NOTIFICATIONS_WEB;
+  static const STUDENT_PAYMENT_HISTORY_WEB = _Paths.STUDENT_PAYMENT_HISTORY_WEB;
+  static const STUDENT_REPORTS_WEB = _Paths.STUDENT_REPORTS_WEB;
+  static const STUDENT_TEST_YOUR_KNOWLEDGE_WEB =
+      _Paths.STUDENT_TEST_YOUR_KNOWLEDGE_WEB;
+  static const STUDENT_MOCKTEST_ATTEMPT_WEB = _Paths.STUDENT_MOCKTEST_ATTEMPT_WEB;
+  static const STUDENT_MOCKTEST_RESULT_WEB = _Paths.STUDENT_MOCKTEST_RESULT_WEB;
+  static const STUDENT_EXERCISES_WEB = _Paths.STUDENT_EXERCISES_WEB;
+  static const STUDENT_EXERCISES_CHAPTER_WEB = _Paths.STUDENT_EXERCISES_CHAPTER_WEB;
+  static const STUDENT_PACKAGES_MOCKTESTS_WEB = _Paths.STUDENT_PACKAGES_MOCKTESTS_WEB;
+  static const STUDENT_CONTENT_TEST_PAGE_WEB = _Paths.STUDENT_CONTENT_TEST_PAGE_WEB;
+  static const STUDENT_PROGRESS_BY_STUDENT_WEB = _Paths.STUDENT_PROGRESS_BY_STUDENT_WEB;
 }
 
 abstract class _Paths {
@@ -99,7 +153,6 @@ abstract class _Paths {
   static const FULL_ASSESSMENT = '/full-assessment';
   static const PARENT_DASHBOARD = '/parent-dashboard';
   static const KID_DETAILED_PROGRESS = '/kid-detailed-progress';
-  static const MENTOR_DASHBOARD = '/mentor-dashboard';
   static const STUDENT_PROFILE = '/student-profile';
   static const STUDENT_PROGRESS = '/student-progress';
   static const GUEST_DASHBOARD = '/guest-dashboard';
@@ -107,8 +160,13 @@ abstract class _Paths {
   static const CUSTOM_ASSESSMENT = '/custom-assessment';
   static const DOWNLOADS = '/downloads';
   static const QA = '/qa';
+  static const STUDENT_QNA_THREADS = '/student-qna-threads';
+  static const STUDENT_QNA_THREAD = '/student-qna-thread';
   static const BRAIN_GAMES = '/brain-games';
   static const MENTOR_CHAT = '/mentor-chat';
+  static const MENTOR_DASHBOARD = '/mentor/dashboard';
+  static const MENTOR_NOTIFICATIONS = '/mentor/notifications';
+  static const MENTOR_QNA = '/mentor/qna';
   static const STUDENT_COACHING = '/student-coaching';
   static const WORKSHEETS = '/worksheets';
   static const WATCH_HISTORY = '/watch-history';
@@ -123,7 +181,61 @@ abstract class _Paths {
   static const PROGRESS = '/progress';
   static const ASSESSMENT = '/assessment';
   static const ASSESSMENT_RESULT = '/assessment-result';
+  static const PUBLIC_ASSESSMENTS = '/public-assessments';
+  static const PUBLIC_ASSESSMENT_ATTEMPT = '/public-assessment-attempt';
+  static const PUBLIC_ASSESSMENT_RESULT = '/public-assessment-result';
   static const SELF_ASSESSMENT_LIST = '/self-assessment-list';
   static const SELF_ASSESSMENT_ATTEMPT = '/self-assessment-attempt';
   static const SELF_ASSESSMENT_RESULT = '/self-assessment-result';
+  static const STUDENT_MOCKTESTS = '/student-mocktests';
+  static const MOCKTEST_ATTEMPT = '/mocktest-attempt';
+  static const MOCKTEST_RESULT = '/mocktest-result';
+  static const FREE_CONTENT = '/free-content';
+  static const STUDENT_REPORTS = '/student-reports';
+  static const STUDENT_AI_CHAT_HISTORY = '/student/ai-chat-history';
+  static const STUDENT_AI_COUNSELLOR = '/student/ai-counsellor';
+  static const EXERCISES = '/exercises';
+  static const CHAPTER_EXERCISES = '/chapter-exercises';
+  static const EXERCISE_ATTEMPT = '/exercise-attempt';
+  static const CONTENT_TEST_PAGE = '/content-test-page';
+  static const STUDENT_CHAPTER_PLAYER = '/student-chapter-player';
+  static const PACKAGE_CHAPTER_PLAYER = '/package-chapter-player';
+  static const STUDENT_SUPPORT = '/student-support';
+  static const STUDENT_DETAILED_REPORT = '/student-report/:type/:attemptId';
+  static const STUDENT_PACKAGES = '/student/packages';
+  static const STUDENT_PACKAGES_SELECT = '/student/packages/select';
+  static const STUDENT_PACKAGES_CART = '/student/packages/cart';
+  static const STUDENT_PACKAGE_DETAILS = '/student/packages/:packageId';
+  static const STUDENT_PACKAGE_CHAPTER =
+      '/student/packages/:packageId/chapter/:chapterId';
+  static const STUDENT_CHAPTER = '/student/chapter/:chapterId';
+  static const STUDENT_GRADE_SUBJECTS = '/student/grade/:gradeId/subjects';
+  static const STUDENT_GRADE_SUBJECT_CHAPTERS =
+      '/student/grade/:gradeId/subject/:subjectId/chapters';
+  static const STUDENT_GRADE_SUBJECT_CHAPTER =
+      '/student/grade/:gradeId/subject/:subjectId/chapter/:chapterId';
+
+  // Web student-panel alias routes (deep-link parity)
+  static const STUDENT_DASHBOARD_WEB = '/student/dashboard';
+  static const STUDENT_PROFILE_WEB = '/student/profile';
+  static const STUDENT_PROGRESS_WEB = '/student/student-progress';
+  static const STUDENT_WORKSHEETS_WEB = '/student/worksheets';
+  static const STUDENT_AI_QA_WEB = '/student/ai-qa';
+  static const STUDENT_COACHING_WEB = '/student/coaching';
+  static const STUDENT_MENTOR_CHAT_WEB = '/student/mentor-chat';
+  static const STUDENT_GAMES_WEB = '/student/games';
+  static const STUDENT_SUPPORT_WEB = '/student/support';
+  static const STUDENT_NOTIFICATIONS_WEB = '/student/notifications';
+  static const STUDENT_PAYMENT_HISTORY_WEB = '/student/payment-history';
+  static const STUDENT_REPORTS_WEB = '/student/reports';
+  static const STUDENT_TEST_YOUR_KNOWLEDGE_WEB = '/student/test-your-knowledge';
+  static const STUDENT_MOCKTEST_ATTEMPT_WEB =
+      '/student/packages/:packageId/mocktests/:mocktestId/attempt';
+  static const STUDENT_MOCKTEST_RESULT_WEB =
+      '/student/packages/:packageId/mocktests/:mocktestId/result/:attemptId';
+  static const STUDENT_EXERCISES_WEB = '/student/exercises';
+  static const STUDENT_EXERCISES_CHAPTER_WEB = '/student/exercises/:chapterId';
+  static const STUDENT_PACKAGES_MOCKTESTS_WEB = '/student/packages/:packageId/mocktests';
+  static const STUDENT_CONTENT_TEST_PAGE_WEB = '/student/content-test-page';
+  static const STUDENT_PROGRESS_BY_STUDENT_WEB = '/student/student-progress/:studentId';
 }

@@ -14,6 +14,8 @@ class ChapterContentModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final Map<String, dynamic>? assessment;
+  final DateTime? scheduledAt;
+  final List<Map<String, dynamic>> polls;
 
   ChapterContentModel({
     required this.id,
@@ -31,9 +33,18 @@ class ChapterContentModel {
     required this.createdAt,
     required this.updatedAt,
     this.assessment,
+    this.scheduledAt,
+    required this.polls,
   });
 
   factory ChapterContentModel.fromJson(Map<String, dynamic> json) {
+    DateTime? _asNullableDate(dynamic v) {
+      if (v == null) return null;
+      if (v is DateTime) return v;
+      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
+
     return ChapterContentModel(
       id: json['_id'] ?? '',
       chapter: ChapterInfo.fromJson(json['chapter'] ?? {}),
@@ -58,6 +69,13 @@ class ChapterContentModel {
         json['updatedAt'] ?? DateTime.now().toIso8601String(),
       ),
       assessment: json['assessment'] as Map<String, dynamic>?,
+      scheduledAt: _asNullableDate(json['scheduledAt']),
+      polls:
+          (json['polls'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          const <Map<String, dynamic>>[],
     );
   }
 
@@ -78,6 +96,8 @@ class ChapterContentModel {
       'createdAt': createdAt.toIso8601String(),
       'assessment': assessment,
       'updatedAt': updatedAt.toIso8601String(),
+      'scheduledAt': scheduledAt?.toIso8601String(),
+      'polls': polls,
     };
   }
 }

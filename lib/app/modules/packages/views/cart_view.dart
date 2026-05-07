@@ -710,6 +710,7 @@ class _CartViewState extends State<CartView> {
     return Obx(() {
       final totalPrice = controller.getTotalPrice();
       final discountedPrice = controller.getDiscountedPrice();
+      final finalPayable = controller.getFinalPayableAmount();
       final savings = controller.getSavings();
       final chapters = controller.getTotalSelectedChapters();
 
@@ -783,6 +784,17 @@ class _CartViewState extends State<CartView> {
                       isDiscount: true,
                     ),
                   ],
+                  const SizedBox(height: 16),
+                  _buildCouponBox(discountedPrice),
+                  if (controller.couponDiscount.value > 0) ...[
+                    const SizedBox(height: 16),
+                    _buildPriceRow(
+                      'Coupon',
+                      '- ₹${controller.couponDiscount.value.toStringAsFixed(0)}',
+                      color: AppTheme.successColor,
+                      isDiscount: true,
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -829,7 +841,7 @@ class _CartViewState extends State<CartView> {
                           ],
                         ),
                         Text(
-                          '₹${discountedPrice.toStringAsFixed(0)}',
+                          '₹${finalPayable.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -906,6 +918,84 @@ class _CartViewState extends State<CartView> {
     );
   }
 
+  Widget _buildCouponBox(double discountedPrice) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Have a coupon?',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: (v) => controller.couponCode.value = v,
+                  decoration: InputDecoration(
+                    hintText: 'Enter code',
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Obx(() {
+                final busy = controller.isApplyingCoupon.value;
+                return FilledButton(
+                  onPressed: busy ? null : controller.applyCoupon,
+                  child: busy
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Apply'),
+                );
+              }),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Clear',
+                onPressed: controller.clearCoupon,
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Obx(() {
+            final msg = controller.couponMessage.value;
+            if (msg.isEmpty) return const SizedBox.shrink();
+            final ok = controller.couponDiscount.value > 0;
+            return Text(
+              msg,
+              style: TextStyle(
+                color: ok ? AppTheme.successColor : Colors.red[700],
+                fontWeight: FontWeight.w600,
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+          Text(
+            'Coupon is applied on discounted amount (₹${discountedPrice.toStringAsFixed(0)}).',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCheckoutButton() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -950,7 +1040,7 @@ class _CartViewState extends State<CartView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '₹${controller.getDiscountedPrice().toStringAsFixed(0)}',
+                          '₹${controller.getFinalPayableAmount().toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -1155,6 +1245,7 @@ class _CartViewState extends State<CartView> {
         gradeId: controller.selectedGradeModel.value!.id,
         subjectIds: subjectIds,
         chapterIds: allChapterIds,
+        couponCode: controller.couponCode.value.trim(),
       );
 
       // Close loading dialog

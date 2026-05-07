@@ -32,7 +32,8 @@ class UserModel {
       name: fullName,
       email: json['email'] ?? '',
       phone: json['phone'],
-      avatar: json['avatar'],
+      avatar: (json['avatar'] ?? json['profilePicture'] ?? json['profile_picture'])
+          ?.toString(),
       role: json['role'] ?? 'student',
       createdAt: DateTime.parse(
         json['createdAt'] ??

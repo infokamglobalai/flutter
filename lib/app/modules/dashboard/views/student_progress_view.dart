@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class StudentProgressView extends GetView<DashboardController> {
   const StudentProgressView({super.key});
@@ -113,7 +114,15 @@ class StudentProgressView extends GetView<DashboardController> {
       }
     }
 
-    final int totalAllAssessments = totalAssessments + totalSelfAssessments;
+    final mocktests = progressData['mocktests'] as List<dynamic>? ?? [];
+    int mocktestCount = 0;
+    for (final m in mocktests) {
+      mocktestCount++;
+      totalScore += ((m['percentage'] ?? 0) as num).toDouble();
+    }
+
+    final int totalAllAssessments =
+        totalAssessments + totalSelfAssessments + mocktestCount;
     final double averageScore = totalAllAssessments > 0
         ? totalScore / totalAllAssessments
         : 0.0;
@@ -202,6 +211,16 @@ class StudentProgressView extends GetView<DashboardController> {
             ...sortedGroupedAssessments
                 .map((group) => _buildSelfAssessmentCard(group))
                 .toList(),
+          ],
+
+          // Mock tests (same payload as web /progress/me)
+          if (mocktests.isNotEmpty) ...[
+            _buildSectionHeader('Mock tests'),
+            ...mocktests.map(
+              (m) => _buildMocktestCard(
+                Map<String, dynamic>.from(m as Map),
+              ),
+            ),
           ],
 
           const SizedBox(height: 24),
@@ -397,6 +416,110 @@ class StudentProgressView extends GetView<DashboardController> {
     );
   }
 
+  Widget _buildMocktestCard(Map<String, dynamic> m) {
+    final title = m['title']?.toString() ?? 'Mock test';
+    final pct = ((m['percentage'] ?? 0) as num).toDouble();
+    final dateStr = m['completedAt']?.toString();
+    final date = DateTime.tryParse(dateStr ?? '') ?? DateTime.now();
+    final attemptId = m['attemptId']?.toString();
+    final rawSubjects = m['subjects'];
+    final List<String> subjects = rawSubjects is List
+        ? rawSubjects.map((e) => e.toString()).toList()
+        : const [];
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: (attemptId != null && attemptId.isNotEmpty)
+            ? () => Get.toNamed(
+                  Routes.MOCKTEST_RESULT,
+                  arguments: {'attemptId': attemptId},
+                )
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.fact_check_rounded,
+                  color: AppTheme.secondaryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF1F2937),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subjects.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subjects.join(', '),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                const SizedBox(height: 4),
+                Text(
+                  '${date.day}/${date.month}/${date.year}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                ),
+                    if (attemptId != null && attemptId.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap to view results',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Text(
+                '${pct.round()}%',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: pct >= 60 ? Colors.green[700] : Colors.orange[800],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
@@ -488,6 +611,7 @@ class StudentProgressView extends GetView<DashboardController> {
     final title = chapter['chapterTitle'] ?? chapter['title'] ?? 'Chapter';
     final videoCompleted = chapter['videoCompleted'] ?? false;
     final assessment = chapter['assessment'];
+    final attempts = (chapter['assessmentAttempts'] as List?) ?? const [];
 
     bool hasAssessment = assessment != null && assessment['attempts'] > 0;
     double percentage = 0;
@@ -495,82 +619,109 @@ class StudentProgressView extends GetView<DashboardController> {
       percentage = ((assessment['percentage'] ?? 0) as num).toDouble();
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
+    // Prefer explicit historical attempts, fallback to lastAttemptId
+    final String? attemptId =
+        (attempts.isNotEmpty ? (attempts.first as Map)['attemptId'] : null)
+            ?.toString() ??
+        assessment?['lastAttemptId']?.toString();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: (attemptId != null && attemptId.isNotEmpty)
+            ? () => Get.toNamed(
+                  Routes.PUBLIC_ASSESSMENT_RESULT,
+                  arguments: {'attemptId': attemptId},
+                )
+            : null,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                videoCompleted
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                color: videoCompleted ? Colors.green : Colors.grey[400],
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-              ),
-            ],
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!, width: 1),
           ),
-          if (hasAssessment) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.quiz_outlined, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text(
-                  'Assessment: ',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                Text(
-                  '${percentage.toStringAsFixed(1)}%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: percentage >= 60 ? Colors.green : Colors.orange,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    videoCompleted
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: videoCompleted ? Colors.green : Colors.grey[400],
+                    size: 20,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: percentage >= 60
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    percentage >= 60 ? 'Passed' : 'Retry',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: percentage >= 60 ? Colors.green : Colors.orange,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1F2937),
+                      ),
                     ),
                   ),
+                  if (attemptId != null && attemptId.isNotEmpty)
+                    Icon(Icons.open_in_new_rounded, size: 16, color: Colors.grey[500]),
+                ],
+              ),
+              if (hasAssessment) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.quiz_outlined, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Assessment: ',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    Text(
+                      '${percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: percentage >= 60 ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: percentage >= 60
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        percentage >= 60 ? 'Passed' : 'Retry',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: percentage >= 60 ? Colors.green : Colors.orange,
+                        ),
+                      ),
+                    ),
+                    if (attemptId != null && attemptId.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tap to view',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ],
                 ),
               ],
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

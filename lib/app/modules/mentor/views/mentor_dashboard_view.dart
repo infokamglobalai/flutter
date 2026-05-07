@@ -4211,9 +4211,9 @@ class MentorDashboardView extends GetView<MentorDashboardController> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: controller.exportAssessmentReport,
+                  onPressed: null,
                   icon: const Icon(Icons.file_download_outlined, size: 16),
-                  label: const Text('Export'),
+                  label: const Text('Export (N/A)'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -5608,17 +5608,11 @@ class MentorDashboardView extends GetView<MentorDashboardController> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        controller.submitFeedback(
-                          submissionId: submission['id'] as String,
-                          feedback: feedbackController.text,
-                          score: double.parse(scoreController.text),
-                        );
-                      },
+                      onPressed: null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      child: const Text('Submit Feedback'),
+                      child: const Text('Submit Feedback (N/A)'),
                     ),
                   ),
                 ],

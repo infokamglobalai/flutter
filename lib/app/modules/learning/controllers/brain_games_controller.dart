@@ -24,295 +24,144 @@ class BrainGamesController extends GetxController {
   }
 
   void loadGames() {
-    // Curated games list - all categories have working games
-    availableGames.value = [
-      // ===== MATH & LOGIC (4 games - all working) =====
-      {
-        'id': 'math_puzzle',
-        'title': 'Quick Math Challenge',
-        'category': 'Math & Logic',
-        'difficulty': 'Easy',
-        'description': 'Solve arithmetic problems as fast as you can',
-        'icon': 'calculate',
-        'color': 0xFF6366F1,
-        'plays': 1234,
-        'rating': 4.5,
-        'duration': '5 min',
-        'type': 'game',
-      },
-      {
-        'id': 'logic_grid',
-        'title': 'Advanced Math Puzzles',
-        'category': 'Math & Logic',
-        'difficulty': 'Hard',
-        'description': 'Complex calculations and mathematical reasoning',
-        'icon': 'grid_on',
-        'color': 0xFF8B5CF6,
-        'plays': 892,
-        'rating': 4.7,
-        'duration': '10 min',
-        'type': 'game',
-      },
-      {
-        'id': 'number_sequence',
-        'title': 'Number Patterns',
-        'category': 'Math & Logic',
-        'difficulty': 'Medium',
-        'description': 'Find patterns in number sequences',
-        'icon': 'auto_graph',
-        'color': 0xFF3B82F6,
-        'plays': 2156,
-        'rating': 4.3,
-        'duration': '7 min',
-        'type': 'game',
-      },
+    availableGames.value = _generateGames(countPerEngine: 18); // 7 engines * 18 = 126 games
+  }
 
-      // ===== MEMORY & FOCUS (3 games - all working) =====
-      {
-        'id': 'memory_cards',
-        'title': 'Memory Match - Easy',
-        'category': 'Memory & Focus',
-        'difficulty': 'Easy',
-        'description': 'Match pairs of cards to test your memory',
-        'icon': 'style',
-        'color': 0xFF10B981,
-        'plays': 3421,
-        'rating': 4.6,
-        'duration': '5 min',
-        'type': 'game',
-      },
-      {
-        'id': 'pattern_recall',
-        'title': 'Memory Match - Hard',
-        'category': 'Memory & Focus',
-        'difficulty': 'Hard',
-        'description': 'Advanced memory challenge with more cards',
-        'icon': 'pattern',
-        'color': 0xFF059669,
-        'plays': 1567,
-        'rating': 4.4,
-        'duration': '8 min',
-        'type': 'game',
-      },
+  List<Map<String, dynamic>> _generateGames({required int countPerEngine}) {
+    const difficulties = ['Easy', 'Medium', 'Hard'];
 
-      // ===== WORD & VOCABULARY (4 games - all working) =====
-      {
-        'id': 'word_scramble',
-        'title': 'Word Unscramble',
-        'category': 'Word & Vocabulary',
-        'difficulty': 'Easy',
-        'description': 'Unscramble letters to form words',
-        'icon': 'text_fields',
-        'color': 0xFFF59E0B,
-        'plays': 2789,
-        'rating': 4.5,
-        'duration': '5 min',
-        'type': 'game',
-      },
-      {
-        'id': 'crossword',
-        'title': 'Word Builder',
-        'category': 'Word & Vocabulary',
-        'difficulty': 'Medium',
-        'description': 'Build words from scrambled letters',
-        'icon': 'grid_4x4',
-        'color': 0xFFD97706,
-        'plays': 1923,
-        'rating': 4.8,
-        'duration': '7 min',
-        'type': 'game',
-      },
-      {
-        'id': 'word_association',
-        'title': 'Vocabulary Challenge',
-        'category': 'Word & Vocabulary',
-        'difficulty': 'Hard',
-        'description': 'Advanced word puzzles and meanings',
-        'icon': 'psychology',
-        'color': 0xFFEA580C,
-        'plays': 1456,
-        'rating': 4.2,
-        'duration': '10 min',
-        'type': 'game',
-      },
+    int pseudoPlays(int seed) => 800 + (seed * 137) % 5200;
+    double pseudoRating(int seed) => 4.1 + ((seed * 17) % 9) / 10.0; // 4.1 - 4.9
 
-      // ===== TRIVIA & KNOWLEDGE (4 games - all working) =====
-      {
-        'id': 'trivia_quiz',
-        'title': 'General Knowledge Quiz',
-        'category': 'Trivia & Knowledge',
-        'difficulty': 'Easy',
-        'description': 'Test your knowledge on various topics',
-        'icon': 'quiz',
-        'color': 0xFF14B8A6,
-        'plays': 4567,
-        'rating': 4.7,
-        'duration': '10 min',
-        'type': 'quiz',
-      },
-      {
-        'id': 'science_quiz',
-        'title': 'Science & Nature Quiz',
-        'category': 'Trivia & Knowledge',
-        'difficulty': 'Medium',
-        'description': 'Questions about science, nature, and technology',
-        'icon': 'science',
-        'color': 0xFF0D9488,
-        'plays': 2234,
-        'rating': 4.5,
-        'duration': '10 min',
-        'type': 'quiz',
-      },
-      {
-        'id': 'riddles',
-        'title': 'Brain Teasers',
-        'category': 'Trivia & Knowledge',
-        'difficulty': 'Medium',
-        'description': 'Solve fun riddles and logic puzzles',
-        'icon': 'lightbulb',
-        'color': 0xFFF97316,
-        'plays': 2891,
-        'rating': 4.8,
-        'duration': '8 min',
-        'type': 'quiz',
-      },
-      {
-        'id': 'history_quiz',
-        'title': 'History & Geography',
-        'category': 'Trivia & Knowledge',
-        'difficulty': 'Hard',
-        'description': 'Test your knowledge of world history and geography',
-        'icon': 'public',
-        'color': 0xFF0891B2,
-        'plays': 1678,
-        'rating': 4.4,
-        'duration': '12 min',
-        'type': 'quiz',
-      },
+    Map<String, dynamic> mk({
+      required String id,
+      required String title,
+      required String category,
+      required String difficulty,
+      required String description,
+      required String icon,
+      required int color,
+      required String duration,
+      required String type,
+      required int seed,
+    }) {
+      return {
+        'id': id,
+        'title': title,
+        'category': category,
+        'difficulty': difficulty,
+        'description': description,
+        'icon': icon,
+        'color': color,
+        'plays': pseudoPlays(seed),
+        'rating': double.parse(pseudoRating(seed).toStringAsFixed(1)),
+        'duration': duration,
+        'type': type,
+      };
+    }
 
-      // ===== SPEED & REFLEXES (3 games - all working) =====
-      {
-        'id': 'color_match',
-        'title': 'Color Match Rush',
-        'category': 'Speed & Reflexes',
-        'difficulty': 'Easy',
-        'description': 'Test your reflexes by matching colors quickly',
-        'icon': 'speed',
-        'color': 0xFFEC4899,
-        'plays': 3245,
-        'rating': 4.6,
-        'duration': '3 min',
-        'type': 'game',
-      },
-      {
-        'id': 'reaction_time',
-        'title': 'Lightning Reflexes',
-        'category': 'Speed & Reflexes',
-        'difficulty': 'Medium',
-        'description': 'Advanced color matching with time pressure',
-        'icon': 'flash_on',
-        'color': 0xFFDB2777,
-        'plays': 2134,
-        'rating': 4.5,
-        'duration': '5 min',
-        'type': 'game',
-      },
-      {
-        'id': 'speed_challenge',
-        'title': 'Speed Master',
-        'category': 'Speed & Reflexes',
-        'difficulty': 'Hard',
-        'description': 'Ultimate test of speed and accuracy',
-        'icon': 'bolt',
-        'color': 0xFFC026D3,
-        'plays': 1876,
-        'rating': 4.7,
-        'duration': '4 min',
-        'type': 'game',
-      },
+    final games = <Map<String, dynamic>>[];
+    int seed = 1;
 
-      // ===== VISUAL & SPATIAL (3 games - all working) =====
-      {
-        'id': 'pattern_find',
-        'title': 'Pattern Detective',
-        'category': 'Visual & Spatial',
-        'difficulty': 'Easy',
-        'description': 'Find the odd pattern in the grid',
-        'icon': 'grid_view',
-        'color': 0xFF8B5CF6,
-        'plays': 2567,
-        'rating': 4.4,
-        'duration': '6 min',
-        'type': 'game',
-      },
-      {
-        'id': 'spatial_reasoning',
-        'title': 'Spatial Master',
-        'category': 'Visual & Spatial',
-        'difficulty': 'Medium',
-        'description': 'Advanced pattern recognition challenges',
-        'icon': 'view_in_ar',
-        'color': 0xFF7C3AED,
-        'plays': 1923,
-        'rating': 4.6,
-        'duration': '8 min',
-        'type': 'game',
-      },
-      {
-        'id': 'visual_puzzle',
-        'title': 'Visual Genius',
-        'category': 'Visual & Spatial',
-        'difficulty': 'Hard',
-        'description': 'Expert-level visual and spatial puzzles',
-        'icon': 'scatter_plot',
-        'color': 0xFF6D28D9,
-        'plays': 1456,
-        'rating': 4.8,
-        'duration': '10 min',
-        'type': 'game',
-      },
+    void addEngine({
+      required String prefix,
+      required String baseTitle,
+      required String category,
+      required String description,
+      required String icon,
+      required int color,
+      required String type,
+    }) {
+      for (var i = 1; i <= countPerEngine; i++) {
+        final d = difficulties[(i - 1) % difficulties.length];
+        final num = i.toString().padLeft(3, '0');
+        games.add(
+          mk(
+            id: '${prefix}_$num',
+            title: '$baseTitle $i',
+            category: category,
+            difficulty: d,
+            description: description,
+            icon: icon,
+            color: color,
+            duration: d == 'Easy'
+                ? '3 min'
+                : d == 'Medium'
+                    ? '6 min'
+                    : '10 min',
+            type: type,
+            seed: seed++,
+          ),
+        );
+      }
+    }
 
-      // ===== STRATEGY & PLANNING (3 games - all working) =====
-      {
-        'id': 'sequence_puzzle',
-        'title': 'Sequence Solver',
-        'category': 'Strategy & Planning',
-        'difficulty': 'Easy',
-        'description': 'Find patterns in number sequences',
-        'icon': 'format_list_numbered',
-        'color': 0xFF059669,
-        'plays': 2890,
-        'rating': 4.5,
-        'duration': '7 min',
-        'type': 'game',
-      },
-      {
-        'id': 'logic_sequence',
-        'title': 'Logic Patterns',
-        'category': 'Strategy & Planning',
-        'difficulty': 'Medium',
-        'description': 'Complex sequence and pattern challenges',
-        'icon': 'analytics',
-        'color': 0xFF047857,
-        'plays': 2145,
-        'rating': 4.7,
-        'duration': '9 min',
-        'type': 'game',
-      },
-      {
-        'id': 'strategy_master',
-        'title': 'Strategy Genius',
-        'category': 'Strategy & Planning',
-        'difficulty': 'Hard',
-        'description': 'Master-level strategic thinking puzzles',
-        'icon': 'psychology',
-        'color': 0xFF065F46,
-        'plays': 1678,
-        'rating': 4.9,
-        'duration': '12 min',
-        'type': 'game',
-      },
-    ];
+    // Engines (all mapped to existing working game widgets)
+    addEngine(
+      prefix: 'math',
+      baseTitle: 'Quick Math',
+      category: 'Math & Logic',
+      description: 'Solve arithmetic problems as fast as you can',
+      icon: 'calculate',
+      color: 0xFF6366F1,
+      type: 'game',
+    );
+    addEngine(
+      prefix: 'memory',
+      baseTitle: 'Memory Match',
+      category: 'Memory & Focus',
+      description: 'Match pairs of cards to test your memory',
+      icon: 'style',
+      color: 0xFF10B981,
+      type: 'game',
+    );
+    addEngine(
+      prefix: 'word',
+      baseTitle: 'Word Scramble',
+      category: 'Word & Vocabulary',
+      description: 'Unscramble letters to form words',
+      icon: 'text_fields',
+      color: 0xFFF59E0B,
+      type: 'game',
+    );
+    addEngine(
+      prefix: 'quiz',
+      baseTitle: 'Knowledge Quiz',
+      category: 'Trivia & Knowledge',
+      description: 'Test your knowledge on various topics',
+      icon: 'quiz',
+      color: 0xFF14B8A6,
+      type: 'quiz',
+    );
+    addEngine(
+      prefix: 'reflex',
+      baseTitle: 'Color Reflex',
+      category: 'Speed & Reflexes',
+      description: 'Test your reflexes by matching colors quickly',
+      icon: 'speed',
+      color: 0xFFEC4899,
+      type: 'game',
+    );
+    addEngine(
+      prefix: 'pattern',
+      baseTitle: 'Pattern Detective',
+      category: 'Visual & Spatial',
+      description: 'Find the odd pattern in the grid',
+      icon: 'grid_view',
+      color: 0xFF8B5CF6,
+      type: 'game',
+    );
+    addEngine(
+      prefix: 'sequence',
+      baseTitle: 'Sequence Solver',
+      category: 'Strategy & Planning',
+      description: 'Find patterns and complete sequences',
+      icon: 'format_list_numbered',
+      color: 0xFF059669,
+      type: 'game',
+    );
+
+    return games;
   }
 
   List<Map<String, dynamic>> get filteredGames {
@@ -345,59 +194,24 @@ class BrainGamesController extends GetxController {
     Widget gameWidget;
 
     // Route to specific game implementation
-    switch (game['id']) {
-      // Math & Logic Games - all use math puzzle engine
-      case 'math_puzzle':
-      case 'logic_grid':
-      case 'number_sequence':
-        gameWidget = MathPuzzleGame(game: game);
-        break;
-
-      // Memory & Focus Games - all use memory match engine
-      case 'memory_cards':
-      case 'pattern_recall':
-        gameWidget = MemoryMatchGame(game: game);
-        break;
-
-      // Word & Vocabulary Games - all use word scramble engine
-      case 'word_scramble':
-      case 'crossword':
-      case 'word_association':
-        gameWidget = WordScrambleGame(game: game);
-        break;
-
-      // Trivia & Knowledge Games - all use quiz engine
-      case 'trivia_quiz':
-      case 'science_quiz':
-      case 'riddles':
-      case 'history_quiz':
-        gameWidget = GeneralQuizGame(game: game);
-        break;
-
-      // Speed & Reflexes Games - all use color match engine
-      case 'color_match':
-      case 'reaction_time':
-      case 'speed_challenge':
-        gameWidget = ColorMatchGame(game: game);
-        break;
-
-      // Visual & Spatial Games - all use pattern recognition engine
-      case 'pattern_find':
-      case 'spatial_reasoning':
-      case 'visual_puzzle':
-        gameWidget = PatternRecognitionGame(game: game);
-        break;
-
-      // Strategy & Planning Games - all use sequence puzzle engine
-      case 'sequence_puzzle':
-      case 'logic_sequence':
-      case 'strategy_master':
-        gameWidget = SequencePuzzleGame(game: game);
-        break;
-
-      // Future games - show placeholder
-      default:
-        gameWidget = GamePlayView(game: game);
+    final id = (game['id'] ?? '').toString();
+    if (id.startsWith('math_')) {
+      gameWidget = MathPuzzleGame(game: game);
+    } else if (id.startsWith('memory_')) {
+      gameWidget = MemoryMatchGame(game: game);
+    } else if (id.startsWith('word_')) {
+      gameWidget = WordScrambleGame(game: game);
+    } else if (id.startsWith('quiz_')) {
+      gameWidget = GeneralQuizGame(game: game);
+    } else if (id.startsWith('reflex_')) {
+      gameWidget = ColorMatchGame(game: game);
+    } else if (id.startsWith('pattern_')) {
+      gameWidget = PatternRecognitionGame(game: game);
+    } else if (id.startsWith('sequence_')) {
+      gameWidget = SequencePuzzleGame(game: game);
+    } else {
+      // Unknown id: show placeholder, but this should be rare.
+      gameWidget = GamePlayView(game: game);
     }
 
     Get.to(

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/data/models/subject_model.dart';
 import 'package:najahapp/app/modules/packages/controllers/package_controller.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class SubjectSelectionView extends GetView<PackageController> {
   const SubjectSelectionView({super.key});
@@ -21,7 +22,7 @@ class SubjectSelectionView extends GetView<PackageController> {
             onPressed: () {
               if (controller.selectedSubjectModels.isNotEmpty) {
                 controller.selectAllChaptersForAllSubjects();
-                Get.toNamed('/cart');
+                Get.toNamed(Routes.CART);
               }
             },
             child: const Text(
@@ -565,7 +566,7 @@ class SubjectSelectionView extends GetView<PackageController> {
                 onPressed: selectedCount > 0
                     ? () {
                         controller.selectAllChaptersForAllSubjects();
-                        Get.toNamed('/cart');
+                        Get.toNamed(Routes.CART);
                       }
                     : null,
                 style: ElevatedButton.styleFrom(

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/services/parent_service.dart';
 
 class KidDetailedProgressController extends GetxController {
+  final ParentService _parentService = Get.find<ParentService>();
   final kidData = <String, dynamic>{}.obs;
   final isLoading = false.obs;
   final subjectProgress = <Map<String, dynamic>>[].obs;
   final recentActivities = <Map<String, dynamic>>[].obs;
   final assessmentHistory = <Map<String, dynamic>>[].obs;
+  final kidId = ''.obs;
 
   Color get performanceColor {
     final performance = kidData['performance'] as String? ?? 'good';
@@ -46,7 +49,10 @@ class KidDetailedProgressController extends GetxController {
     final args = Get.arguments as Map<String, dynamic>?;
     if (args != null && args['kid'] != null) {
       kidData.value = Map<String, dynamic>.from(args['kid'] as Map);
+      kidId.value = (kidData['id'] ?? '').toString();
       _processRealData();
+      // Immediately try to refresh from backend to ensure data is current
+      refreshData();
     }
   }
 
@@ -247,6 +253,25 @@ class KidDetailedProgressController extends GetxController {
   }
 
   Future<void> refreshData() async {
-    _processRealData();
+    final id = kidId.value;
+    if (id.isEmpty) {
+      _processRealData();
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final resp = await _parentService.getStudentProgress(id);
+      if (resp['success'] == true) {
+        final progressData = (resp['data'] as Map?)?.cast<String, dynamic>() ?? {};
+        final stats = ParentService.computeStats(progressData);
+        kidData.addAll(stats);
+        kidData.refresh();
+      }
+    } catch (_) {
+      // best-effort; keep existing data
+    } finally {
+      _processRealData();
+    }
   }
 }

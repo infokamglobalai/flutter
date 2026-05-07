@@ -372,18 +372,24 @@ class MentorDashboardController extends GetxController {
   Future<void> _loadAssignments() async {
     isLoadingAssignments.value = true;
     try {
-      // Simulate API call - Replace with actual API
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Mock data - Replace with actual API response
-      assignedBoards.value = ['CBSE', 'ICSE'];
-      assignedGrades.value = ['Grade 8', 'Grade 9', 'Grade 10'];
-      assignedSubjects.value = [
-        'Mathematics',
-        'Science',
-        'Physics',
-        'Chemistry',
-      ];
+      final response = await _apiService.get(ApiConstants.mentorStudentsWithProgress);
+      if (response.data['success'] == true) {
+        final meta = response.data['meta'] as Map<String, dynamic>?;
+        assignedBoards.value =
+            (meta?['mentorBoardNames'] as List<dynamic>? ?? [])
+                .map((e) => e.toString())
+                .toList();
+        assignedGrades.value =
+            (meta?['mentorGradeNames'] as List<dynamic>? ?? [])
+                .map((e) => e.toString())
+                .toList();
+        // Subjects not included in this endpoint; they are provided by exercise report meta filters.
+        if (assignedSubjects.isEmpty) {
+          assignedSubjects.value = [];
+        }
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to load mentor assignments');
+      }
     } catch (e) {
       Get.snackbar(
         'Error',
@@ -1755,48 +1761,19 @@ class MentorDashboardController extends GetxController {
     required String feedback,
     required double score,
   }) async {
-    try {
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Update submission - Replace with actual API
-      final index = assessmentSubmissions.indexWhere(
-        (s) => s['id'] == submissionId,
-      );
-      if (index != -1) {
-        assessmentSubmissions[index]['feedback'] = feedback;
-        assessmentSubmissions[index]['score'] = score;
-        assessmentSubmissions[index]['percentage'] =
-            (score / assessmentSubmissions[index]['totalScore']) * 100;
-        assessmentSubmissions[index]['status'] = 'reviewed';
-        assessmentSubmissions.refresh();
-
-        pendingSubmissionsCount.value--;
-
-        Get.back();
-        Get.snackbar(
-          'Success',
-          'Feedback submitted successfully. Student will be notified.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to submit feedback');
-    }
+    Get.snackbar(
+      'Not Available',
+      'Mentor assessment submission review is not supported by the backend yet.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   Future<void> exportAssessmentReport() async {
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Export to Excel - Replace with actual implementation
-      Get.snackbar(
-        'Success',
-        'Assessment report exported successfully',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to export report');
-    }
+    Get.snackbar(
+      'Not Available',
+      'Assessment submissions export is not supported by the backend yet.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   List<Map<String, dynamic>> getSubmissionsForAssessment(String assessmentId) {

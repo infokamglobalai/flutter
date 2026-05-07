@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/data/models/notification_model.dart';
 
@@ -20,7 +21,7 @@ class NotificationService {
       if (isRead != null) queryParams['isRead'] = isRead;
 
       final response = await _apiService.get(
-        '/notifications',
+        ApiConstants.notifications,
         queryParameters: queryParams,
       );
 
@@ -53,7 +54,7 @@ class NotificationService {
   // Get unread count
   Future<int> getUnreadCount() async {
     try {
-      final response = await _apiService.get('/notifications/unread-count');
+      final response = await _apiService.get(ApiConstants.notificationsUnreadCount);
 
       if (response.statusCode == 200) {
         return response.data['data']['unreadCount'] ?? 0;
@@ -69,7 +70,7 @@ class NotificationService {
   // Get specific notification
   Future<NotificationModel> getNotificationById(String id) async {
     try {
-      final response = await _apiService.get('/notifications/$id');
+      final response = await _apiService.get(ApiConstants.notificationById(id));
 
       if (response.statusCode == 200) {
         return NotificationModel.fromJson(response.data['data']);
@@ -91,7 +92,7 @@ class NotificationService {
   // Mark notification as read
   Future<NotificationModel> markAsRead(String id) async {
     try {
-      final response = await _apiService.put('/notifications/$id/mark-read');
+      final response = await _apiService.patch(ApiConstants.notificationMarkRead(id));
 
       if (response.statusCode == 200) {
         return NotificationModel.fromJson(response.data['data']);
@@ -113,7 +114,7 @@ class NotificationService {
   // Mark all notifications as read
   Future<int> markAllAsRead() async {
     try {
-      final response = await _apiService.put('/notifications/mark-all-read');
+      final response = await _apiService.patch(ApiConstants.notificationsMarkAllRead);
 
       if (response.statusCode == 200) {
         return response.data['data']['modifiedCount'] ?? 0;
@@ -133,7 +134,7 @@ class NotificationService {
   // Delete notification
   Future<void> deleteNotification(String id) async {
     try {
-      final response = await _apiService.delete('/notifications/$id');
+      final response = await _apiService.delete(ApiConstants.notificationById(id));
 
       if (response.statusCode != 200) {
         throw Exception('Failed to delete notification');

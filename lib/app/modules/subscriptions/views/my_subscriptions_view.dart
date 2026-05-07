@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/subscriptions/controllers/my_subscriptions_controller.dart';
 import 'package:najahapp/app/data/models/subscription_model.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class MySubscriptionsView extends GetView<MySubscriptionsController> {
   const MySubscriptionsView({super.key});
@@ -420,7 +421,7 @@ class MySubscriptionsView extends GetView<MySubscriptionsController> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Action button
+                    // Action buttons
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -452,6 +453,33 @@ class MySubscriptionsView extends GetView<MySubscriptionsController> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Get.toNamed(
+                            Routes.STUDENT_MOCKTESTS,
+                            arguments: {'subscriptionId': subscription.id},
+                          );
+                        },
+                        icon: Icon(Icons.fact_check_rounded, color: color),
+                        label: Text(
+                          'Mock tests',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: color.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),

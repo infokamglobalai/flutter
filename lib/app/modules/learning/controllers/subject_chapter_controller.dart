@@ -1,6 +1,9 @@
+// ignore_for_file: unused_element
+
 import 'package:get/get.dart';
 import '../../../data/models/subscription_model.dart';
 import '../../../data/services/data_service.dart';
+import '../../../routes/app_pages.dart';
 
 class SubjectChapterController extends GetxController {
   // Subscription data passed from dashboard
@@ -23,7 +26,21 @@ class SubjectChapterController extends GetxController {
   }
 
   List<String> get subjects {
-    return subscription.value?.subjects.map((s) => s.name).toList() ?? [];
+    final sub = subscription.value;
+    if (sub == null) return [];
+
+    // Prefer explicit subjects list when present.
+    final fromSubjects = sub.subjects.map((s) => s.name).where((n) => n.trim().isNotEmpty).toList();
+    if (fromSubjects.isNotEmpty) return fromSubjects;
+
+    // Fallback: derive unique subject names from chapters (backend sometimes
+    // populates chapters without a top-level subjects array).
+    final set = <String>{};
+    for (final ch in sub.chapters) {
+      final name = ch.subject.name.trim();
+      if (name.isNotEmpty) set.add(name);
+    }
+    return set.toList()..sort();
   }
 
   Map<String, dynamic> getChaptersForSubject(String subject) {
@@ -41,15 +58,16 @@ class SubjectChapterController extends GetxController {
         final isCompleted = chapter.videoCompleted;
         return {
           'id': index + 1, // Use sequential number for display
-          'chapterId': chapter.id, // Keep actual MongoDB ID for reference
+          // Keep actual MongoDB ID for reference (used by VideoPlayerController)
+          'chapterId': chapter.id,
+          '_id': chapter.id,
           'name': chapter.name,
           'title': chapter.name,
-          'duration':
-              '${(10 + (index % 20))}:${(index % 60).toString().padLeft(2, '0')}',
-          'videoUrl': 'https://example.com/video_${chapter.id}.mp4',
-          'documents': _getChapterDocuments(subject, index + 1),
-          'exercise': _getChapterExercise(subject, index + 1),
-          'assessment': _getChapterAssessment(subject, index + 1),
+          // These are loaded from the API inside VideoPlayer screen.
+          // Keep placeholders only so older UI code doesn't crash.
+          'documents': const <Map<String, dynamic>>[],
+          'exercise': null,
+          'assessment': null,
           'progress': isCompleted ? 1.0 : 0.0,
           'completed': isCompleted,
           'videoCompleted': isCompleted,
@@ -95,7 +113,7 @@ class SubjectChapterController extends GetxController {
           'Energy Sources',
         ][chapterNum % 12];
       default:
-        return 'Introduction to ${subject}';
+        return 'Introduction to $subject';
     }
   }
 
@@ -229,7 +247,7 @@ class SubjectChapterController extends GetxController {
     }
 
     Get.toNamed(
-      '/video-player',
+      Routes.VIDEO_PLAYER,
       arguments: {
         'chapter': chapter,
         'subject': subject,

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/data/models/chapter_model.dart';
 import 'package:najahapp/app/modules/packages/controllers/package_controller.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class ChapterSelectionView extends GetView<PackageController> {
   const ChapterSelectionView({super.key});
@@ -603,7 +604,7 @@ class ChapterSelectionView extends GetView<PackageController> {
               ElevatedButton(
                 onPressed: totalChapters > 0
                     ? () {
-                        Get.toNamed('/cart');
+                        Get.toNamed(Routes.CART);
                       }
                     : null,
                 style: ElevatedButton.styleFrom(

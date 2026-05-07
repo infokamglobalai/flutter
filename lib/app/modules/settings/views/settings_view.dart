@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/settings/controllers/settings_controller.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({super.key});
@@ -48,7 +49,7 @@ class SettingsView extends GetView<SettingsController> {
               ),
             ),
             onPressed: () {
-              Get.toNamed('/notifications');
+              Get.toNamed(Routes.NOTIFICATIONS);
             },
           ),
           const SizedBox(width: 8),
@@ -131,7 +132,7 @@ class SettingsView extends GetView<SettingsController> {
             // Arrow button
             InkWell(
               onTap: () {
-                Get.toNamed('/student-profile');
+                Get.toNamed(Routes.STUDENT_PROFILE);
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(

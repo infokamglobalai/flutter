@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 import 'package:video_player/video_player.dart' as vp;
 import 'package:chewie/chewie.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:najahapp/app/data/services/data_service.dart';
@@ -19,11 +21,40 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
+import 'package:najahapp/app/routes/app_pages.dart';
+import 'package:najahapp/app/core/services/storage_service.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class VideoPlayerController extends GetxController {
   // Use the app-wide singleton so the Dio connection pool is shared
   final DataService _dataService = Get.find<DataService>();
   final ApiService _apiService = Get.find<ApiService>();
+  StorageService? _storage;
+
+  // ── Live Premiere + Polls (web ContentTestPage parity) ─────────────────────
+  static const Duration _livePremiereWindow = Duration(hours: 3);
+  final isLockedBySchedule = false.obs;
+  final timeRemainingUntilLiveSeconds = RxnInt();
+  final isPremiere = false.obs;
+  final premiereMuted = true.obs;
+
+  final activePoll = Rxn<Map<String, dynamic>>();
+  final pollResult = Rxn<Map<String, dynamic>>(); // { selectedIndex, isCorrect }
+  final pollAnswers = <String, Map<String, dynamic>>{}.obs;
+  final shownPollKeys = <String>{}.obs;
+
+  Timer? _scheduleTicker;
+  Timer? _premiereSyncTicker;
+  Timer? _pollTicker;
+  Timer? _pollDismissTimer;
+
+  // AI voice playback
+  final AudioPlayer _aiAudioPlayer = AudioPlayer();
+  final isAiSpeaking = false.obs;
+
+  // Gemini-style Voice Assistant (voice -> AI -> voice)
+  final isVoiceAssistantProcessing = false.obs;
+  final lastVoiceTranscript = ''.obs;
 
   // Chapter and package data
   final chapterData = Rx<Map<String, dynamic>>({});
@@ -48,11 +79,13 @@ class VideoPlayerController extends GetxController {
   final isYoutubeVideo = false.obs;
   final isVideoInitialized = false.obs;
   final isVideoLoading = true.obs; // starts true → spinner shows immediately
+  final videoErrorMessage = ''.obs;
   final isPlaying = false.obs;
   final currentPosition = Duration.zero.obs;
   final totalDuration = Duration.zero.obs;
   final isLoading = false.obs;
   final isFullScreen = false.obs;
+  final isEmulator = false.obs;
 
   // Document viewer
   final selectedDocument = Rx<Map<String, dynamic>?>(null);
@@ -78,6 +111,9 @@ class VideoPlayerController extends GetxController {
   // Assessment
   final assessmentData = Rx<Map<String, dynamic>?>(null);
   final isAssessmentAvailable = false.obs;
+  /// True only after the student has essentially finished the video
+  /// (we mark completion at 95% watch progress).
+  final isVideoCompleted = false.obs;
   final showAssessmentDialog = false.obs;
   final currentQuestionIndex = 0.obs;
   final assessmentAnswers =
@@ -98,6 +134,7 @@ class VideoPlayerController extends GetxController {
   final isSendingMessage = false.obs;
   final chatInputController = TextEditingController();
   final chatScrollController = ScrollController();
+  final isLoadingChatHistory = false.obs;
 
   // Voice Input
   late stt.SpeechToText speechToText;
@@ -119,6 +156,11 @@ class VideoPlayerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _detectEmulator();
+    // StorageService may not be registered in some deep-link / test contexts.
+    if (Get.isRegistered<StorageService>()) {
+      _storage = Get.find<StorageService>();
+    }
     _loadArguments();
     _initializeVideo();
     _loadDocuments();
@@ -126,6 +168,20 @@ class VideoPlayerController extends GetxController {
     // Defer speech init so it never blocks the page load or platform channel.
     // Speech recognition is only needed when the user taps the mic button.
     Future.delayed(const Duration(seconds: 3), _initializeSpeech);
+  }
+
+  Future<void> _detectEmulator() async {
+    try {
+      if (!Platform.isAndroid) {
+        isEmulator.value = false;
+        return;
+      }
+      final info = await DeviceInfoPlugin().androidInfo;
+      isEmulator.value = !(info.isPhysicalDevice ?? true);
+    } catch (_) {
+      // Default to "not emulator" so real devices keep working.
+      isEmulator.value = false;
+    }
   }
 
   void _loadArguments() {
@@ -142,6 +198,8 @@ class VideoPlayerController extends GetxController {
 
       // Load content and resources from API
       if (chapterId.value.isNotEmpty) {
+        // Persist last chapter for AI chat history screens.
+        _storage?.saveString('lastChapterId', chapterId.value);
         _loadChapterContents();
         _loadChapterResources();
       }
@@ -162,12 +220,20 @@ class VideoPlayerController extends GetxController {
         print('📖 Current content: ${currentContent.value!.title}');
         print('🔍 Assessment in content: ${currentContent.value!.assessment}');
 
+        // Load persisted AI chat history for this chapter (best-effort).
+        _loadAiChatHistoryForCurrentContent();
+
         // Release the loading gate immediately so the page renders,
         // then kick off video init in the background.
         isLoadingContent.value = false;
 
+        // Live scheduling / premiere / polls (web parity)
+        _setupSchedulePremiereAndPolls(currentContent.value!);
+
         // Initialize video with first content (non-blocking)
-        _initializeVideoFromContent(currentContent.value!);
+        if (!isLockedBySchedule.value) {
+          _initializeVideoFromContent(currentContent.value!);
+        }
         // Load assessment for this content
         _loadAssessmentFromContent();
         // Load exercises
@@ -189,6 +255,242 @@ class VideoPlayerController extends GetxController {
     }
   }
 
+  void _setupSchedulePremiereAndPolls(ChapterContentModel content) {
+    _scheduleTicker?.cancel();
+    _premiereSyncTicker?.cancel();
+    _pollTicker?.cancel();
+    _pollDismissTimer?.cancel();
+    activePoll.value = null;
+    pollResult.value = null;
+
+    // restore persisted poll answers
+    try {
+      final raw = _storage?.getString('pollAnswers') ?? '';
+      if (raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          pollAnswers
+            ..clear()
+            ..addAll(
+              decoded.map(
+                (k, v) => MapEntry(
+                  k.toString(),
+                  (v is Map) ? Map<String, dynamic>.from(v) : <String, dynamic>{},
+                ),
+              ),
+            );
+        }
+      }
+    } catch (_) {
+      // ignore persistence errors
+    }
+
+    void checkSchedule() {
+      final scheduledAt = content.scheduledAt;
+      if (scheduledAt == null) {
+        isLockedBySchedule.value = false;
+        timeRemainingUntilLiveSeconds.value = null;
+        isPremiere.value = false;
+        return;
+      }
+
+      final now = DateTime.now();
+      if (now.isBefore(scheduledAt)) {
+        isLockedBySchedule.value = true;
+        timeRemainingUntilLiveSeconds.value =
+            scheduledAt.difference(now).inSeconds;
+        isPremiere.value = false;
+        return;
+      }
+
+      isLockedBySchedule.value = false;
+      timeRemainingUntilLiveSeconds.value = null;
+
+      final completedKey =
+          'chapter_video_completed_${subscriptionId.value}_${chapterId.value}';
+      final isFirstWatch = _storage?.getBool(completedKey) != true;
+
+      final elapsed = now.difference(scheduledAt);
+      final withinWindow =
+          elapsed >= Duration.zero && elapsed <= _livePremiereWindow;
+      isPremiere.value = isFirstWatch && withinWindow;
+      premiereMuted.value = isPremiere.value;
+    }
+
+    checkSchedule();
+    _scheduleTicker = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final wasLocked = isLockedBySchedule.value;
+      checkSchedule();
+      if (wasLocked && !isLockedBySchedule.value) {
+        await _initializeVideoFromContent(content);
+      }
+    });
+
+    // Sync + polls while in premiere.
+    _premiereSyncTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!isPremiere.value) return;
+      _syncToLiveWallClock(content);
+      _clampSeekingAhead(content);
+    });
+
+    _pollTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!isPremiere.value) return;
+      _checkForLivePolls(content);
+    });
+  }
+
+  int _liveOffsetSeconds(DateTime scheduledAt) {
+    final diff = DateTime.now().difference(scheduledAt).inSeconds;
+    return diff < 0 ? 0 : diff;
+  }
+
+  void _syncToLiveWallClock(ChapterContentModel content) {
+    final scheduledAt = content.scheduledAt;
+    if (scheduledAt == null) return;
+    final dur = totalDuration.value.inSeconds;
+    if (dur <= 0) return;
+    final live = _liveOffsetSeconds(scheduledAt).clamp(0, dur);
+    final target = Duration(
+      milliseconds: (1000 * (live - 0.25)).toInt().clamp(0, 1 << 31),
+    );
+
+    if (isYoutubeVideo.value && youtubeController != null) {
+      final pos = youtubeController!.value.position;
+      if ((pos - target).inSeconds.abs() > 2) {
+        youtubeController!.seekTo(target);
+      }
+      if (premiereMuted.value) youtubeController!.mute();
+    } else if (videoController != null && videoController!.value.isInitialized) {
+      final pos = videoController!.value.position;
+      if ((pos - target).inSeconds.abs() > 2) {
+        videoController!.seekTo(target);
+      }
+      if (premiereMuted.value) {
+        try {
+          videoController!.setVolume(0);
+        } catch (_) {}
+      }
+    }
+  }
+
+  String? _currentStudentId() {
+    final u = _storage?.getUserData();
+    final id = u?['_id']?.toString().trim();
+    return (id == null || id.isEmpty) ? null : id;
+  }
+
+  String _aiChatContextForContent() => 'content_test';
+
+  Future<void> _loadAiChatHistoryForCurrentContent() async {
+    if (currentContent.value == null) return;
+    if (!_apiService.hasToken) return;
+
+    // Backend groups content chats by Chapter (targetId).
+    final targetId = currentContent.value?.chapter.id;
+    isLoadingChatHistory.value = true;
+    try {
+      final items = await _dataService.fetchAiChatHistory(
+        context: _aiChatContextForContent(),
+        targetId: (targetId != null && targetId.isNotEmpty) ? targetId : null,
+      );
+
+      final normalized = items.map((m) {
+        final role = (m['role'] ?? '').toString();
+        final content = (m['content'] ?? '').toString();
+        final ts = m['timestamp']?.toString();
+        final metadata =
+            (m['metadata'] is Map) ? Map<String, dynamic>.from(m['metadata']) : null;
+        return <String, dynamic>{
+          'role': role,
+          'content': content,
+          if (ts != null && ts.isNotEmpty) 'timestamp': ts,
+          if (metadata != null) 'metadata': metadata,
+        };
+      }).toList();
+
+      if (normalized.isNotEmpty) {
+        chatMessages.assignAll(normalized);
+        _scrollToBottom();
+      }
+    } finally {
+      isLoadingChatHistory.value = false;
+    }
+  }
+
+  void _clampSeekingAhead(ChapterContentModel content) {
+    final scheduledAt = content.scheduledAt;
+    if (scheduledAt == null) return;
+    final dur = totalDuration.value.inSeconds;
+    if (dur <= 0) return;
+    final live = _liveOffsetSeconds(scheduledAt).clamp(0, dur);
+    final maxAllowed = Duration(
+      milliseconds: (1000 * (live - 0.25)).toInt().clamp(0, 1 << 31),
+    );
+
+    if (isYoutubeVideo.value && youtubeController != null) {
+      final pos = youtubeController!.value.position;
+      if (pos > maxAllowed + const Duration(milliseconds: 200)) {
+        youtubeController!.seekTo(maxAllowed);
+      }
+    } else if (videoController != null && videoController!.value.isInitialized) {
+      final pos = videoController!.value.position;
+      if (pos > maxAllowed + const Duration(milliseconds: 200)) {
+        videoController!.seekTo(maxAllowed);
+      }
+    }
+  }
+
+  void _checkForLivePolls(ChapterContentModel content) {
+    if (activePoll.value != null) return;
+    final list = content.polls;
+    if (list.isEmpty) return;
+
+    final now = DateTime.now();
+    for (final p in list) {
+      final pKey = (p['_id'] ?? p['id'] ?? 't_${p['time']}').toString();
+      if (shownPollKeys.contains(pKey)) continue;
+      if (pollAnswers.containsKey(pKey)) continue;
+
+      final timeRaw = p['time'];
+      final start = (timeRaw is String) ? DateTime.tryParse(timeRaw) : null;
+      if (start == null) continue;
+      final durationSec = (p['duration'] as num?)?.toInt() ?? 15;
+      final end = start.add(Duration(seconds: durationSec));
+
+      if (now.isAfter(start) && now.isBefore(end)) {
+        shownPollKeys.add(pKey);
+        activePoll.value = Map<String, dynamic>.from(p);
+        pollResult.value = null;
+
+        final remainingMs =
+            end.difference(now).inMilliseconds.clamp(500, 600000);
+        _pollDismissTimer?.cancel();
+        _pollDismissTimer = Timer(Duration(milliseconds: remainingMs), () {
+          activePoll.value = null;
+          pollResult.value = null;
+        });
+        return;
+      }
+    }
+  }
+
+  void answerActivePoll(int optIndex) {
+    final poll = activePoll.value;
+    if (poll == null) return;
+    if (pollResult.value != null) return;
+
+    final correct = (poll['correctAnswer'] as num?)?.toInt();
+    final isCorrect = correct != null && optIndex == correct;
+    pollResult.value = {'selectedIndex': optIndex, 'isCorrect': isCorrect};
+
+    final pKey = (poll['_id'] ?? poll['id'] ?? 't_${poll['time']}').toString();
+    pollAnswers[pKey] = {'selectedIndex': optIndex, 'isCorrect': isCorrect};
+    pollAnswers.refresh();
+    try {
+      _storage?.saveString('pollAnswers', jsonEncode(pollAnswers));
+    } catch (_) {}
+  }
+
   Future<void> _loadChapterResources() async {
     try {
       isLoadingResources.value = true;
@@ -200,6 +502,8 @@ class VideoPlayerController extends GetxController {
       documents.value = chapterResources
           .map(
             (resource) => {
+              // Normalize IDs so older UI comparisons work consistently.
+              'id': resource.id,
               '_id': resource.id,
               'title': resource.title,
               'description': resource.description,
@@ -241,6 +545,7 @@ class VideoPlayerController extends GetxController {
     // Don't set isLoading here – the page is already visible at this point.
     // isVideoInitialized drives the loading indicator inside the video widget.
     isVideoLoading.value = true;
+    videoErrorMessage.value = '';
 
     try {
       print('Content videoType: ${content.videoType}');
@@ -259,6 +564,7 @@ class VideoPlayerController extends GetxController {
 
     } on PlatformException catch (e) {
       isVideoInitialized.value = false;
+      videoErrorMessage.value = e.message ?? 'Platform error';
       print('Platform Exception: ${e.code} - ${e.message}');
       print('Platform Exception Details: $e');
       Get.snackbar(
@@ -271,6 +577,7 @@ class VideoPlayerController extends GetxController {
       );
     } on TimeoutException catch (e) {
       isVideoInitialized.value = false;
+      videoErrorMessage.value = 'Connection timeout';
       print('Timeout Exception: $e');
       Get.snackbar(
         'Connection Timeout',
@@ -282,6 +589,7 @@ class VideoPlayerController extends GetxController {
       );
     } catch (e) {
       isVideoInitialized.value = false;
+      videoErrorMessage.value = e.toString();
       print('Error initializing video: $e');
       Get.snackbar(
         'Error',
@@ -302,6 +610,7 @@ class VideoPlayerController extends GetxController {
   Future<void> _initializeYoutubeVideo(String youtubeUrl) async {
     try {
       print('Initializing YouTube video: $youtubeUrl');
+      videoErrorMessage.value = '';
 
       // Extract video ID from URL
       final videoId = YoutubePlayer.convertUrlToId(youtubeUrl);
@@ -317,14 +626,14 @@ class VideoPlayerController extends GetxController {
       // Initialize YouTube embedded controller
       youtubeController = YoutubePlayerController(
         initialVideoId: videoId,
-        flags: const YoutubePlayerFlags(
+        flags: YoutubePlayerFlags(
           autoPlay: false,
-          mute: false,
+          mute: isPremiere.value,
           enableCaption: true,
           loop: false,
           forceHD: false,
-          hideControls: false,
-          controlsVisibleAtStart: true,
+          hideControls: isPremiere.value,
+          controlsVisibleAtStart: !isPremiere.value,
         ),
       );
 
@@ -343,6 +652,7 @@ class VideoPlayerController extends GetxController {
       print('YouTube video initialized successfully');
     } catch (e) {
       print('Error initializing YouTube video: $e');
+      videoErrorMessage.value = e.toString();
       rethrow;
     }
   }
@@ -353,10 +663,6 @@ class VideoPlayerController extends GetxController {
 
       final uri = Uri.parse(streamUrl);
 
-      // Create controller – do NOT await initialize() here; it blocks for
-      // 10-30 s while the server streams video metadata.  Chewie's
-      // autoInitialize flag calls it on its own thread and shows its own
-      // loading indicator, so the player widget appears immediately.
       videoController = vp.VideoPlayerController.networkUrl(uri);
 
       // Initialize Chewie controller with autoInitialize
@@ -365,9 +671,9 @@ class VideoPlayerController extends GetxController {
         autoInitialize: true,
         autoPlay: false,
         looping: false,
-        allowFullScreen: true,
+        allowFullScreen: !isPremiere.value,
         allowMuting: true,
-        showControls: true,
+        showControls: !isPremiere.value,
         materialProgressColors: ChewieProgressColors(
           playedColor: Get.theme.primaryColor,
           handleColor: Get.theme.primaryColor,
@@ -401,6 +707,7 @@ class VideoPlayerController extends GetxController {
       // Show the player widget immediately
       isYoutubeVideo.value = false;
       isVideoInitialized.value = true;
+      videoErrorMessage.value = '';
 
       // Add listener – updates duration & play state once buffering starts
       videoController!.addListener(_videoListener);
@@ -408,6 +715,7 @@ class VideoPlayerController extends GetxController {
       print('Direct stream video controller ready (buffering in background)');
     } catch (e) {
       print('Error initializing direct stream video: $e');
+      videoErrorMessage.value = e.toString();
       rethrow;
     }
   }
@@ -425,6 +733,18 @@ class VideoPlayerController extends GetxController {
           ? videoPath 
           : '$baseUrl/$cleanPath';
       print('Initializing uploaded video: $videoUrl');
+      videoErrorMessage.value = '';
+
+      // Emulator workaround: goldfish MediaCodec can crash the emulator when
+      // trying to decode some H.264 MP4 files (device disconnect). Avoid
+      // embedded playback and offer external open instead.
+      if (isEmulator.value) {
+        isYoutubeVideo.value = false;
+        isVideoInitialized.value = false;
+        videoErrorMessage.value =
+            'Video playback is not supported on Android emulator. Please use a real device or open the video externally.';
+        return;
+      }
 
       // Validate URL
       final uri = Uri.tryParse(videoUrl);
@@ -432,9 +752,6 @@ class VideoPlayerController extends GetxController {
         throw Exception('Invalid video URL format: $videoUrl');
       }
 
-      // Create controller – do NOT await initialize() here; it blocks for
-      // 10-30 s on large video files or slow servers.  Chewie's
-      // autoInitialize flag calls it internally and shows its own spinner.
       videoController = vp.VideoPlayerController.networkUrl(
         uri,
         httpHeaders: const {
@@ -443,15 +760,16 @@ class VideoPlayerController extends GetxController {
         },
       );
 
-      // Initialize Chewie with autoInitialize = true
+      // Initialize Chewie with autoInitialize so we don't block the UI thread
+      // or trigger emulator MediaCodec crashes on initialize().
       chewieController = ChewieController(
         videoPlayerController: videoController!,
         autoInitialize: true,
         autoPlay: false,
         looping: false,
-        allowFullScreen: true,
+        allowFullScreen: !isPremiere.value,
         allowMuting: true,
-        showControls: true,
+        showControls: !isPremiere.value,
         materialProgressColors: ChewieProgressColors(
           playedColor: Get.theme.primaryColor,
           handleColor: Get.theme.primaryColor,
@@ -493,12 +811,20 @@ class VideoPlayerController extends GetxController {
       // Show player widget immediately – Chewie handles its own loading state
       isYoutubeVideo.value = false;
       isVideoInitialized.value = true;
+      videoErrorMessage.value = '';
 
       print('Uploaded video controller ready (buffering in background)');
     } catch (e) {
       print('Error initializing uploaded video: $e');
+      videoErrorMessage.value = e.toString();
       rethrow;
     }
+  }
+
+  Future<void> retryVideo() async {
+    final content = currentContent.value;
+    if (content == null) return;
+    await _initializeVideoFromContent(content);
   }
 
   void _initializeVideo() {
@@ -1222,26 +1548,33 @@ class VideoPlayerController extends GetxController {
   Future<void> downloadDocumentForOffline() async {
     if (selectedDocument.value == null) return;
 
+    final doc = selectedDocument.value!;
+    final resourceId = (doc['_id'] ?? doc['id'] ?? '').toString();
+    final fileName = (doc['fileName'] ?? doc['title'] ?? 'Document').toString();
+    final fileUrl = (doc['fileUrl'] ?? doc['filePath'] ?? '').toString();
+
+    if (resourceId.isEmpty || fileUrl.isEmpty) {
+      Get.snackbar(
+        'Unavailable',
+        'This document cannot be downloaded.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
     isDownloadingDocument.value = true;
     documentDownloadProgress.value = 0.0;
 
-    // Simulate download progress
-    for (var i = 0; i <= 100; i += 15) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      documentDownloadProgress.value = i / 100;
-    }
+    // Download without auto-opening (offline save).
+    await downloadResource(
+      resourceId,
+      fileName,
+      fileUrl,
+      openAfterDownload: false,
+      onProgress: (p) => documentDownloadProgress.value = p,
+    );
 
     isDownloadingDocument.value = false;
-    final docName =
-        selectedDocument.value!['title'] as String? ??
-        selectedDocument.value!['fileName'] as String? ??
-        'Document';
-    Get.snackbar(
-      'Download Complete',
-      '$docName available offline',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
-    );
   }
 
   // Assessment methods
@@ -1273,10 +1606,15 @@ class VideoPlayerController extends GetxController {
   }
 
   void _checkVideoCompletion() {
-    // Check if video is near completion (95% or more)
+    // Check if video is near completion.
+    // We mark "completed" at 95% (progress save), but auto-open the assessment
+    // only when the video essentially ends (>= 99% or within ~2s of the end).
     if (totalDuration.value.inSeconds > 0) {
-      final progress =
-          currentPosition.value.inSeconds / totalDuration.value.inSeconds;
+      final durSec = totalDuration.value.inSeconds;
+      final posSec = currentPosition.value.inSeconds.clamp(0, durSec);
+      final progress = posSec / durSec;
+      final nearEndByProgress = progress >= 0.99;
+      final nearEndBySeconds = (durSec - posSec) <= 2;
 
       print(
         'Video progress: ${(progress * 100).toStringAsFixed(1)}% - Assessment available: $isAssessmentAvailable - Already shown: $_hasShownAssessment',
@@ -1285,16 +1623,17 @@ class VideoPlayerController extends GetxController {
       // Mark video as complete at 95%
       if (progress >= 0.95 && !_hasMarkedVideoComplete) {
         _hasMarkedVideoComplete = true;
+        isVideoCompleted.value = true;
         _markVideoComplete();
       }
 
       // Trigger assessment if available
-      if (progress >= 0.95 &&
+      if ((nearEndByProgress || nearEndBySeconds) &&
           isAssessmentAvailable.value &&
           !showAssessmentDialog.value &&
           !_hasShownAssessment) {
         print(
-          '🎯 Triggering assessment at ${(progress * 100).toStringAsFixed(1)}% completion',
+          '🎯 Triggering assessment near end (${(progress * 100).toStringAsFixed(1)}%)',
         );
         _hasShownAssessment = true;
         _triggerChapterAssessment();
@@ -1332,6 +1671,15 @@ class VideoPlayerController extends GetxController {
         // Load existing rating then prompt the user
         await _loadMyRating();
         _showRatingPrompt();
+
+        // Persist completion (used for "first watch" premiere logic).
+        final completedKey =
+            'chapter_video_completed_${subscriptionId.value}_${chapterId.value}';
+        try {
+          await _storage?.saveBool(completedKey, true);
+        } catch (_) {
+          // ignore
+        }
       } else {
         print('⚠️ Failed to mark video complete: ${response['message']}');
       }
@@ -1431,15 +1779,31 @@ class VideoPlayerController extends GetxController {
       false; // Track if we've marked video as complete
 
   void _triggerChapterAssessment() {
-    // Navigate to assessment page when video is completed
     Future.delayed(const Duration(seconds: 1), () {
       if (!isClosed && isAssessmentAvailable.value) {
         final completed = assessmentData.value?['completed'] as bool? ?? false;
         if (!completed) {
-          Get.toNamed('/assessment');
+          openAssessmentAttempt();
         }
       }
     });
+  }
+
+  void openAssessmentAttempt() {
+    final a = assessmentData.value;
+    if (a == null) return;
+    final assessmentId = (a['_id'] ?? '').toString();
+    if (assessmentId.isEmpty) return;
+
+    // Reuse the public assessment attempt flow (same submit endpoint on backend).
+    Get.toNamed(
+      Routes.PUBLIC_ASSESSMENT_ATTEMPT,
+      arguments: {
+        'assessment': a,
+        'chapterId': chapterId.value,
+        'subscriptionId': subscriptionId.value,
+      },
+    );
   }
 
   void startAssessment() {
@@ -1644,6 +2008,7 @@ class VideoPlayerController extends GetxController {
     String resourceId,
     String fileName,
     String fileUrl,
+    {bool openAfterDownload = true, void Function(double progress)? onProgress}
   ) async {
     try {
       // Check if already downloading
@@ -1772,6 +2137,7 @@ class VideoPlayerController extends GetxController {
           if (total != -1) {
             final progress = received / total;
             resourceDownloadProgress[resourceId] = progress;
+            if (onProgress != null) onProgress(progress);
           }
         },
       );
@@ -1788,8 +2154,10 @@ class VideoPlayerController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // Open the downloaded file
-      await _openFile(filePath, fileName);
+      if (openAfterDownload) {
+        // Open the downloaded file
+        await _openFile(filePath, fileName);
+      }
     } catch (e) {
       downloadingResourceIds.remove(resourceId);
       resourceDownloadProgress.remove(resourceId);
@@ -1891,6 +2259,14 @@ class VideoPlayerController extends GetxController {
       'timestamp': DateTime.now().toIso8601String(),
     });
 
+    // Persist user message (best-effort)
+    _dataService.saveAiChatMessage(
+      context: _aiChatContextForContent(),
+      role: 'user',
+      content: question,
+      targetId: currentContent.value?.chapter.id,
+    );
+
     // Clear input
     chatInputController.clear();
 
@@ -1931,6 +2307,7 @@ class VideoPlayerController extends GetxController {
       if (result['success'] == true) {
         final answer = result['data']['answer'] as String;
         final metadata = result['data']['metadata'] as Map<String, dynamic>?;
+        final audioBase64 = result['data']['audio']?.toString();
 
         // Add AI response to chat
         chatMessages.add({
@@ -1940,8 +2317,31 @@ class VideoPlayerController extends GetxController {
           'metadata': metadata,
         });
 
+        // Persist assistant message (best-effort)
+        _dataService.saveAiChatMessage(
+          context: _aiChatContextForContent(),
+          role: 'assistant',
+          content: answer,
+          targetId: currentContent.value?.chapter.id,
+          metadata: metadata,
+        );
+
         // Scroll to bottom to show new message
         _scrollToBottom();
+
+        // Auto-play AI voice if provided by backend
+        if (audioBase64 != null && audioBase64.isNotEmpty) {
+          try {
+            isAiSpeaking.value = true;
+            await _aiAudioPlayer.stop();
+            final bytes = base64Decode(audioBase64);
+            await _aiAudioPlayer.play(BytesSource(bytes));
+          } catch (_) {
+            // best-effort: ignore audio failures
+          } finally {
+            isAiSpeaking.value = false;
+          }
+        }
       } else {
         Get.snackbar(
           'Error',
@@ -1987,6 +2387,13 @@ class VideoPlayerController extends GetxController {
 
   void clearChat() {
     chatMessages.clear();
+    final studentId = _currentStudentId();
+    if (studentId != null) {
+      _dataService.clearAiChatHistory(
+        context: _aiChatContextForContent(),
+        studentId: studentId,
+      );
+    }
     Get.snackbar(
       'Chat Cleared',
       'Conversation history has been cleared',
@@ -2065,6 +2472,82 @@ class VideoPlayerController extends GetxController {
     }
   }
 
+  /// "Gemini voice assistant" experience (web parity):
+  /// - listen to user's voice
+  /// - on final transcript: send AI chat message
+  /// - auto-play backend provided audio (handled by [sendChatMessage])
+  Future<void> startGeminiVoiceAssistant() async {
+    if (!speechEnabled.value) {
+      await startListening(); // will show snackbar
+      return;
+    }
+
+    if (currentContent.value == null) {
+      Get.snackbar(
+        'Error',
+        'No content selected',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // Request microphone permission (same as normal voice input)
+    var status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      Get.snackbar(
+        'Permission Required',
+        'Microphone permission is required for voice assistant',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    // Stop any ongoing AI audio so the user can speak.
+    try {
+      await _aiAudioPlayer.stop();
+    } catch (_) {
+      // best-effort
+    }
+
+    if (isListening.value) return;
+    isListening.value = true;
+    lastVoiceTranscript.value = '';
+
+    await speechToText.listen(
+      onResult: (result) async {
+        final text = result.recognizedWords.trim();
+        lastVoiceTranscript.value = text;
+        chatInputController.text = text;
+
+        if (result.finalResult && text.isNotEmpty) {
+          // Stop listening before we send to AI.
+          await stopListening();
+          isVoiceAssistantProcessing.value = true;
+          try {
+            await sendChatMessage();
+          } finally {
+            isVoiceAssistantProcessing.value = false;
+          }
+        }
+      },
+      listenMode: stt.ListenMode.confirmation,
+      cancelOnError: true,
+      partialResults: true,
+    );
+  }
+
+  Future<void> toggleGeminiVoiceAssistant() async {
+    if (isListening.value) {
+      await stopListening();
+      return;
+    }
+    if (isVoiceAssistantProcessing.value) return;
+    await startGeminiVoiceAssistant();
+  }
+
   Future<void> stopListening() async {
     if (isListening.value) {
       await speechToText.stop();
@@ -2092,6 +2575,11 @@ class VideoPlayerController extends GetxController {
     chatInputController.dispose();
     chatScrollController.dispose();
     speechToText.cancel();
+    _aiAudioPlayer.dispose();
+    _scheduleTicker?.cancel();
+    _premiereSyncTicker?.cancel();
+    _pollTicker?.cancel();
+    _pollDismissTimer?.cancel();
 
     // Reset orientation to portrait
     SystemChrome.setPreferredOrientations([

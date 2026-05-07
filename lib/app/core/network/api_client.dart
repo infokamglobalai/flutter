@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/core/constants/app_constants.dart';
@@ -10,9 +11,10 @@ class ApiClient {
   final StorageService _storageService = Get.find<StorageService>();
 
   ApiClient() {
+    final baseUrl = _resolveBaseUrl();
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
+        baseUrl: baseUrl,
         connectTimeout: AppConstants.connectionTimeout,
         receiveTimeout: AppConstants.receiveTimeout,
         headers: {
@@ -23,6 +25,16 @@ class ApiClient {
     );
 
     _setupInterceptors();
+  }
+
+  String _resolveBaseUrl() {
+    if (kIsWeb) {
+      final host = Uri.base.host.toLowerCase();
+      if (host == 'localhost' || host == '127.0.0.1') {
+        return 'http://localhost:3000/api';
+      }
+    }
+    return ApiConstants.baseUrl;
   }
 
   void _setupInterceptors() {

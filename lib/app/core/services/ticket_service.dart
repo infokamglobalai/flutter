@@ -2,6 +2,9 @@ import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/services/api_service.dart';
 import 'package:najahapp/app/modules/support/controllers/ticket_controller.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
+import 'dart:convert';
+import 'dart:io';
 
 class TicketService {
   final ApiService _apiService = Get.find<ApiService>();
@@ -12,17 +15,50 @@ class TicketService {
     required String subject,
     required String description,
     Map<String, dynamic>? metadata,
+    List<String> imagePaths = const [],
+    String? videoPath,
   }) async {
     try {
-      final response = await _apiService.post(
-        '/tickets',
-        data: {
-          'category': category,
-          'subject': subject,
-          'description': description,
-          if (metadata != null) 'metadata': metadata,
-        },
-      );
+      // Backend rule: either up to 3 images OR 1 video (not both)
+      if (imagePaths.isNotEmpty && videoPath != null && videoPath.isNotEmpty) {
+        throw 'Attach either up to 3 images OR 1 video (not both).';
+      }
+      if (imagePaths.length > 3) {
+        throw 'You can attach a maximum of 3 images.';
+      }
+
+      final form = dio.FormData();
+      form.fields
+        ..add(MapEntry('category', category))
+        ..add(MapEntry('subject', subject))
+        ..add(MapEntry('description', description));
+
+      if (metadata != null) {
+        // Ticket controller supports JSON string for multipart
+        form.fields.add(MapEntry('metadata', jsonEncode(metadata)));
+      }
+
+      for (final p in imagePaths) {
+        final fileName = p.split(Platform.pathSeparator).last;
+        form.files.add(
+          MapEntry(
+            'images',
+            await dio.MultipartFile.fromFile(p, filename: fileName),
+          ),
+        );
+      }
+
+      if (videoPath != null && videoPath.isNotEmpty) {
+        final fileName = videoPath.split(Platform.pathSeparator).last;
+        form.files.add(
+          MapEntry(
+            'video',
+            await dio.MultipartFile.fromFile(videoPath, filename: fileName),
+          ),
+        );
+      }
+
+      final response = await _apiService.post(ApiConstants.tickets, data: form);
 
       return response.data;
     } on dio.DioException catch (e) {
@@ -48,7 +84,7 @@ class TicketService {
       if (search != null) queryParams['search'] = search;
 
       final response = await _apiService.get(
-        '/tickets',
+        ApiConstants.tickets,
         queryParameters: queryParams,
       );
 
@@ -61,7 +97,7 @@ class TicketService {
   /// Get a single ticket by ID
   Future<Map<String, dynamic>> getTicketById(String ticketId) async {
     try {
-      final response = await _apiService.get('/tickets/$ticketId');
+      final response = await _apiService.get(ApiConstants.ticketById(ticketId));
       return response.data;
     } on dio.DioException catch (e) {
       throw _handleError(e);
@@ -76,7 +112,7 @@ class TicketService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/tickets/$ticketId/responses',
+        ApiConstants.ticketResponses(ticketId),
         data: {'message': message, 'isInternal': isInternal},
       );
 
@@ -99,7 +135,10 @@ class TicketService {
       if (priority != null) data['priority'] = priority;
       if (assignedTo != null) data['assignedTo'] = assignedTo;
 
-      final response = await _apiService.put('/tickets/$ticketId', data: data);
+      final response = await _apiService.put(
+        ApiConstants.ticketById(ticketId),
+        data: data,
+      );
 
       return response.data;
     } on dio.DioException catch (e) {
@@ -110,7 +149,7 @@ class TicketService {
   /// Delete ticket (admin only)
   Future<Map<String, dynamic>> deleteTicket(String ticketId) async {
     try {
-      final response = await _apiService.delete('/tickets/$ticketId');
+      final response = await _apiService.delete(ApiConstants.ticketById(ticketId));
       return response.data;
     } on dio.DioException catch (e) {
       throw _handleError(e);
@@ -120,7 +159,7 @@ class TicketService {
   /// Get ticket statistics (admin only)
   Future<Map<String, dynamic>> getTicketStats() async {
     try {
-      final response = await _apiService.get('/tickets/stats');
+      final response = await _apiService.get(ApiConstants.ticketStats);
       return response.data;
     } on dio.DioException catch (e) {
       throw _handleError(e);

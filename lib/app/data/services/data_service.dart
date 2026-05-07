@@ -1,4 +1,7 @@
 import 'package:dio/dio.dart';
+import 'dart:typed_data';
+import 'package:get/get.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/services/api_service.dart';
 import '../models/board_model.dart';
 import '../models/grade_model.dart';
@@ -9,9 +12,174 @@ import '../models/payment_history_model.dart';
 import '../models/chapter_content_model.dart';
 import '../models/chapter_resource_model.dart';
 import '../models/exercise_model.dart';
+import '../models/banner_model.dart';
 
 class DataService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
+
+  // ── AI Chat History (persisted threads) ────────────────────────────────────
+
+  /// Save a single chat message to persisted AI chat history.
+  /// Backend attaches student from auth; [context] should match backend usage,
+  /// e.g. 'counsellor' or 'content_test'. [targetId] is optional (chapter-wise).
+  Future<void> saveAiChatMessage({
+    required String context,
+    required String role,
+    required String content,
+    String? targetId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _apiService.post(
+        ApiConstants.aiChatSave,
+        data: {
+          'context': context,
+          'role': role,
+          'content': content,
+          if (targetId != null && targetId.isNotEmpty) 'targetId': targetId,
+          if (metadata != null) 'metadata': metadata,
+        },
+      );
+    } catch (_) {
+      // best-effort persistence; ignore failures so chat UX isn't blocked
+    }
+  }
+
+  /// Load chat history messages for a context, optionally scoped to a targetId.
+  /// Returns `List<Map<String, dynamic>>` message objects from backend.
+  Future<List<Map<String, dynamic>>> fetchAiChatHistory({
+    required String context,
+    String? targetId,
+  }) async {
+    try {
+      final resp = await _apiService.get(
+        ApiConstants.aiChatHistory(context),
+        queryParameters: (targetId != null && targetId.isNotEmpty)
+            ? {'targetId': targetId}
+            : null,
+      );
+      if (resp.data is Map && resp.data['success'] == true) {
+        final raw = resp.data['data'];
+        if (raw is List) {
+          return raw.whereType<Map>().map((e) {
+            return Map<String, dynamic>.from(e as Map);
+          }).toList();
+        }
+        return <Map<String, dynamic>>[];
+      }
+      return <Map<String, dynamic>>[];
+    } on DioException {
+      return <Map<String, dynamic>>[];
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  /// Clear chat history for a context (and optionally targetId if backend supports it).
+  Future<void> clearAiChatHistory({
+    required String context,
+    String? studentId,
+  }) async {
+    try {
+      // Backend currently expects { studentId, context }.
+      // We pass only context by default; include studentId only if provided.
+      await _apiService.post(
+        ApiConstants.aiChatClear,
+        data: {
+          if (studentId != null && studentId.isNotEmpty) 'studentId': studentId,
+          'context': context,
+        },
+      );
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  // ── AI Counsellor ─────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> fetchAiCounsellorData() async {
+    try {
+      final resp = await _apiService.get(ApiConstants.aiCounsellorData);
+      return (resp.data is Map<String, dynamic>)
+          ? resp.data as Map<String, dynamic>
+          : <String, dynamic>{'success': false, 'message': 'Invalid response'};
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = (data is Map && data['message'] != null)
+          ? data['message'].toString()
+          : 'Network error occurred';
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAiCounsellorReports() async {
+    try {
+      final resp = await _apiService.get(ApiConstants.aiCounsellorReports);
+      return (resp.data is Map<String, dynamic>)
+          ? resp.data as Map<String, dynamic>
+          : <String, dynamic>{'success': false, 'message': 'Invalid response'};
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = (data is Map && data['message'] != null)
+          ? data['message'].toString()
+          : 'Network error occurred';
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> chatWithAiCounsellor({
+    required String question,
+    required List<Map<String, String>> conversationHistory,
+    String? systemPrompt,
+  }) async {
+    try {
+      final resp = await _apiService.post(
+        ApiConstants.aiCounsellorChat,
+        data: {
+          'question': question.trim(),
+          'conversationHistory': conversationHistory,
+          if (systemPrompt != null && systemPrompt.isNotEmpty)
+            'systemPrompt': systemPrompt,
+        },
+      );
+      return (resp.data is Map<String, dynamic>)
+          ? resp.data as Map<String, dynamic>
+          : <String, dynamic>{'success': false, 'message': 'Invalid response'};
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = (data is Map && data['message'] != null)
+          ? data['message'].toString()
+          : 'Network error occurred';
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  Future<List<BannerModel>> fetchPublicBanners() async {
+    try {
+      final response = await _apiService.get(ApiConstants.bannersPublic);
+      if (response.data['success'] == true) {
+        final raw = response.data['data'];
+        if (raw is List) {
+          return raw
+              .whereType<Map>()
+              .map((e) => BannerModel.fromJson(Map<String, dynamic>.from(e)))
+              .toList();
+        }
+        return <BannerModel>[];
+      }
+      throw Exception(response.data['message'] ?? 'Failed to fetch banners');
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Network error occurred');
+    } catch (e) {
+      throw Exception('An unexpected error occurred: $e');
+    }
+  }
 
   // Fetch Boards
   Future<Map<String, dynamic>> fetchBoards({
@@ -247,10 +415,11 @@ class DataService {
     required String gradeId,
     required List<String> subjectIds,
     required List<String> chapterIds,
+    String? couponCode,
   }) async {
     try {
       final response = await _apiService.post(
-        '/payment/ottu/initiate',
+        ApiConstants.paymentOttuInitiate,
         data: {
           'packageId': packageId,
           'packageType': packageType,
@@ -258,6 +427,7 @@ class DataService {
           'gradeId': gradeId,
           'subjectIds': subjectIds,
           'chapterIds': chapterIds,
+          if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         },
       );
 
@@ -291,7 +461,7 @@ class DataService {
   /// Cancels/deletes a pending subscription when the user abandons payment.
   Future<void> cancelOttuPayment(String subscriptionId) async {
     try {
-      await _apiService.delete('/payment/ottu/cancel/$subscriptionId');
+      await _apiService.delete(ApiConstants.paymentOttuCancel(subscriptionId));
     } catch (_) {
       // Non-critical – best-effort cleanup
     }
@@ -301,7 +471,7 @@ class DataService {
   /// Returns { success, paymentStatus, isActive, subscriptionId, subscription }
   Future<Map<String, dynamic>> getOttuPaymentStatus(String sessionId) async {
     try {
-      final response = await _apiService.get('/payment/ottu/status/$sessionId');
+      final response = await _apiService.get(ApiConstants.paymentOttuStatus(sessionId));
 
       if (response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
@@ -426,7 +596,8 @@ class DataService {
     String chapterId,
   ) async {
     try {
-      final response = await _apiService.get('/resources/chapter/$chapterId');
+      final response =
+          await _apiService.get(ApiConstants.resourcesByChapter(chapterId));
 
       if (response.data['success'] == true) {
         final List<ChapterResourceModel> resources =
@@ -450,7 +621,7 @@ class DataService {
   Future<List<ExerciseModel>> fetchChapterExercises(String chapterId) async {
     try {
       final response = await _apiService.get(
-        '/exercises/public/chapter/$chapterId',
+        ApiConstants.exercisesPublicByChapter(chapterId),
       );
 
       if (response.data['success'] == true) {
@@ -474,15 +645,19 @@ class DataService {
   /// resources so the VideoPlayer screen loads faster. Errors are silently
   /// swallowed because this is purely an optimisation.
   void prefetchChapterData(String chapterId) {
-    fetchChapterContents(chapterId).catchError((_) {});
-    fetchChapterResources(chapterId).catchError((_) {});
-    fetchChapterExercises(chapterId).catchError((_) {});
+    fetchChapterContents(chapterId)
+        .catchError((_) => <ChapterContentModel>[]);
+    fetchChapterResources(chapterId)
+        .catchError((_) => <ChapterResourceModel>[]);
+    fetchChapterExercises(chapterId).catchError((_) => <ExerciseModel>[]);
   }
 
   // Submit Assessment Answers
   Future<Map<String, dynamic>> submitAssessment({
     required String assessmentId,
     required Map<String, dynamic> answers,
+    String? chapterId,
+    String? subscriptionId,
   }) async {
     try {
       print('🌐 API Call: POST /assessments/$assessmentId/submit');
@@ -490,7 +665,12 @@ class DataService {
 
       final response = await _apiService.post(
         '/assessments/$assessmentId/submit',
-        data: {'answers': answers},
+        data: {
+          'answers': answers,
+          if (chapterId != null && chapterId.isNotEmpty) 'chapterId': chapterId,
+          if (subscriptionId != null && subscriptionId.isNotEmpty)
+            'subscriptionId': subscriptionId,
+        },
       );
 
       print('📥 Response: ${response.data}');
@@ -557,7 +737,7 @@ class DataService {
     try {
       print('🌐 API Call: GET /progress/me');
 
-      final response = await _apiService.get('/progress/me');
+      final response = await _apiService.get(ApiConstants.progressMe);
 
       print('📥 Response: ${response.data}');
 
@@ -637,7 +817,7 @@ class DataService {
       print('📝 Question: $question');
 
       final response = await _apiService.post(
-        '/ai/chat',
+        ApiConstants.aiChat,
         data: {
           'contentId': contentId,
           'question': question,
@@ -663,6 +843,101 @@ class DataService {
       };
     } catch (e) {
       print('❌ AI Exception: $e');
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  // AI - Translate text
+  Future<Map<String, dynamic>> translateText({
+    required String text,
+    required String targetLanguage,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        ApiConstants.aiTranslate,
+        data: {'text': text, 'targetLanguage': targetLanguage},
+      );
+      if (response.data['success'] == true) {
+        return {'success': true, 'data': response.data['data']};
+      }
+      return {
+        'success': false,
+        'message': response.data['message'] ?? 'Translation failed',
+      };
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error occurred',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  // AI - Text to speech (binary mp3)
+  Future<Map<String, dynamic>> generateSpeech({
+    required String text,
+    String voice = 'alloy',
+  }) async {
+    try {
+      final resp = await _apiService.postBytes(
+        ApiConstants.aiTts,
+        data: {'text': text, 'voice': voice},
+        headers: {'Content-Type': 'application/json'},
+      );
+      final bytes = resp.data;
+      if (bytes == null || bytes.isEmpty) {
+        return {'success': false, 'message': 'Failed to generate speech'};
+      }
+      return {'success': true, 'audioBytes': Uint8List.fromList(bytes)};
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        return {'success': false, 'message': data['message'].toString()};
+      }
+      return {'success': false, 'message': 'Network error occurred'};
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  /// Public student assessments list.
+  /// GET /api/assessments/public?page&limit&chapter
+  Future<Map<String, dynamic>> fetchPublicAssessments({
+    int page = 1,
+    int limit = 20,
+    String? chapterId,
+  }) async {
+    try {
+      final qp = <String, dynamic>{'page': page, 'limit': limit};
+      if (chapterId != null && chapterId.isNotEmpty) qp['chapter'] = chapterId;
+      final resp = await _apiService.get(
+        ApiConstants.assessmentsPublic,
+        queryParameters: qp,
+      );
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error occurred',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
+    }
+  }
+
+  /// Attempt result
+  /// GET /api/assessments/attempts/:attemptId
+  Future<Map<String, dynamic>> fetchAssessmentAttemptResult(String attemptId) async {
+    try {
+      final resp = await _apiService.get(ApiConstants.assessmentAttemptById(attemptId));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error occurred',
+      };
+    } catch (e) {
       return {'success': false, 'message': 'An unexpected error occurred: $e'};
     }
   }

@@ -7,10 +7,12 @@ import 'package:najahapp/app/data/models/subject_model.dart';
 import 'package:najahapp/app/data/models/chapter_model.dart';
 import 'package:najahapp/app/data/services/package_service.dart';
 import 'package:najahapp/app/data/services/data_service.dart';
+import 'package:najahapp/app/data/services/coupon_service.dart';
 
 class PackageController extends GetxController {
   final PackageService _packageService = PackageService();
   final DataService _dataService = DataService();
+  final CouponService _couponService = Get.find<CouponService>();
 
   // Package data from API
   final RxList<PackageModel> publicPackages = <PackageModel>[].obs;
@@ -53,9 +55,28 @@ class PackageController extends GetxController {
   final double pricePerChapter = 299.0; // Base price per chapter
   final cartItems = <Map<String, dynamic>>[].obs;
 
+  // Coupon
+  final couponCode = ''.obs;
+  final couponDiscount = 0.0.obs;
+  final couponFinalAmount = 0.0.obs;
+  final isApplyingCoupon = false.obs;
+  final couponMessage = ''.obs;
+
+  // Deep-link preselects (web parity: /student/grade/:gradeId/subjects...)
+  final RxString _preselectGradeId = ''.obs;
+  final RxString _preselectSubjectId = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
+    if (Get.arguments is Map) {
+      final args = (Get.arguments as Map).cast<String, dynamic>();
+      // These are optional; used when opening selection screens from deep-links.
+      _setPreselects(
+        gradeId: args['preselectGradeId']?.toString(),
+        subjectId: args['preselectSubjectId']?.toString(),
+      );
+    }
     // Load grades, boards, and subjects
     loadPublicGrades();
     loadPublicBoards();
@@ -72,6 +93,32 @@ class PackageController extends GetxController {
     }
   }
 
+  void _setPreselects({String? gradeId, String? subjectId}) {
+    final g = (gradeId ?? '').trim();
+    final s = (subjectId ?? '').trim();
+    _preselectGradeId.value = g;
+    _preselectSubjectId.value = s;
+  }
+
+  void _applyPreselectsIfPossible() {
+    if (_preselectGradeId.value.isNotEmpty && selectedGradeModel.value == null) {
+      final g = publicGrades.firstWhereOrNull(
+        (e) => e.id == _preselectGradeId.value,
+      );
+      if (g != null) selectedGradeModel.value = g;
+    }
+
+    if (_preselectSubjectId.value.isNotEmpty && selectedSubjectModels.isEmpty) {
+      final s = publicSubjects.firstWhereOrNull(
+        (e) => e.id == _preselectSubjectId.value,
+      );
+      if (s != null) {
+        selectedSubjectModels.assignAll([s]);
+        selectedSubjects.assignAll([s.id]);
+      }
+    }
+  }
+
   Future<void> loadPublicGrades() async {
     try {
       isLoadingGrades.value = true;
@@ -79,6 +126,7 @@ class PackageController extends GetxController {
 
       final grades = await _dataService.fetchPublicGrades();
       publicGrades.value = grades;
+      _applyPreselectsIfPossible();
     } catch (e) {
       gradesError.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -108,6 +156,7 @@ class PackageController extends GetxController {
       final result = await _dataService.fetchSubjects(limit: 100);
       if (result['success'] == true) {
         publicSubjects.value = result['subjects'] as List<SubjectModel>;
+        _applyPreselectsIfPossible();
       } else {
         throw Exception('Failed to load subjects');
       }
@@ -412,6 +461,54 @@ class PackageController extends GetxController {
       return total * 0.90; // 10% off
     }
     return total;
+  }
+
+  double getFinalPayableAmount() {
+    final bulkDiscounted = getDiscountedPrice();
+    final hasCoupon = couponDiscount.value > 0 &&
+        couponFinalAmount.value > 0 &&
+        couponFinalAmount.value <= bulkDiscounted;
+    return hasCoupon ? couponFinalAmount.value : bulkDiscounted;
+  }
+
+  Future<void> applyCoupon() async {
+    final code = couponCode.value.trim();
+    if (code.isEmpty) {
+      couponMessage.value = 'Enter a coupon code';
+      return;
+    }
+
+    try {
+      isApplyingCoupon.value = true;
+      couponMessage.value = '';
+      final amount = getDiscountedPrice();
+      final res = await _couponService.validate(code: code, amount: amount);
+      if (res['success'] == true) {
+        final data = res['data'] as Map<String, dynamic>;
+        couponDiscount.value =
+            ((data['discountAmount'] ?? 0) as num).toDouble();
+        couponFinalAmount.value = ((data['finalAmount'] ?? amount) as num).toDouble();
+        couponMessage.value =
+            'Coupon applied: -₹${couponDiscount.value.toStringAsFixed(0)}';
+      } else {
+        couponDiscount.value = 0;
+        couponFinalAmount.value = 0;
+        couponMessage.value = (res['message'] ?? 'Invalid coupon').toString();
+      }
+    } catch (e) {
+      couponDiscount.value = 0;
+      couponFinalAmount.value = 0;
+      couponMessage.value = e.toString().replaceAll('Exception: ', '');
+    } finally {
+      isApplyingCoupon.value = false;
+    }
+  }
+
+  void clearCoupon() {
+    couponCode.value = '';
+    couponDiscount.value = 0;
+    couponFinalAmount.value = 0;
+    couponMessage.value = '';
   }
 
   double getSavings() {

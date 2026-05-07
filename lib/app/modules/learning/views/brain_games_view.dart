@@ -738,38 +738,13 @@ class BrainGamesView extends GetView<BrainGamesController> {
   }
 
   bool _isGameImplemented(String gameId) {
-    // List of fully implemented game IDs - all 24 games are working
-    const implementedGames = [
-      // Math & Logic
-      'math_puzzle',
-      'logic_grid',
-      'number_sequence',
-      // Memory & Focus
-      'memory_cards',
-      'pattern_recall',
-      // Word & Vocabulary
-      'word_scramble',
-      'crossword',
-      'word_association',
-      'vocabulary_builder',
-      // Trivia & Knowledge
-      'trivia_quiz',
-      'science_quiz',
-      'riddles',
-      'history_quiz',
-      // Speed & Reflexes
-      'color_match',
-      'reaction_time',
-      'speed_challenge',
-      // Visual & Spatial
-      'pattern_find',
-      'spatial_reasoning',
-      'visual_puzzle',
-      // Strategy & Planning
-      'sequence_puzzle',
-      'logic_sequence',
-      'strategy_master',
-    ];
-    return implementedGames.contains(gameId);
+    // All generated IDs map to one of the working engines.
+    return gameId.startsWith('math_') ||
+        gameId.startsWith('memory_') ||
+        gameId.startsWith('word_') ||
+        gameId.startsWith('quiz_') ||
+        gameId.startsWith('reflex_') ||
+        gameId.startsWith('pattern_') ||
+        gameId.startsWith('sequence_');
   }
 }
