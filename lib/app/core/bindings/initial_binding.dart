@@ -12,6 +12,7 @@ import 'package:najahapp/app/data/services/coupon_service.dart';
 import 'package:najahapp/app/data/services/data_service.dart';
 import 'package:najahapp/app/data/services/guest_resource_service.dart';
 import 'package:najahapp/app/data/services/mocktest_service.dart';
+import 'package:najahapp/app/data/services/qna_service.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -32,6 +33,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut<MocktestService>(() => MocktestService(), fenix: true);
     Get.lazyPut<CouponService>(() => CouponService(), fenix: true);
     Get.lazyPut<GuestResourceService>(() => GuestResourceService(), fenix: true);
+    Get.lazyPut<QnaService>(() => QnaService(), fenix: true);
 
     // Brain Games Storage Service
     Get.put(BrainGamesStorageService(), permanent: true);

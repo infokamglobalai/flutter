@@ -6,10 +6,30 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.eduaitutors.userapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
+
+    val keystoreProperties = Properties()
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(keystorePropertiesFile.inputStream())
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = keystoreProperties["storeFile"]?.toString()
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+            }
+            storePassword = keystoreProperties["storePassword"]?.toString()
+            keyAlias = keystoreProperties["keyAlias"]?.toString()
+            keyPassword = keystoreProperties["keyPassword"]?.toString()
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -34,9 +54,8 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Release signing for Play Store publishing
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
