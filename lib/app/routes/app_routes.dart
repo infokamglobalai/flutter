@@ -31,7 +31,6 @@ abstract class Routes {
   static const PACKAGE_SELECTION = _Paths.PACKAGE_SELECTION;
   static const BOARD_SELECTION = _Paths.BOARD_SELECTION;
   static const SUBJECT_SELECTION = _Paths.SUBJECT_SELECTION;
-  static const CHAPTER_SELECTION = _Paths.CHAPTER_SELECTION;
   static const CART = _Paths.CART;
   static const SUBJECT_CHAPTER_DETAIL = _Paths.SUBJECT_CHAPTER_DETAIL;
   static const EMAIL_VERIFICATION = _Paths.EMAIL_VERIFICATION;
@@ -147,7 +146,6 @@ abstract class _Paths {
   static const PACKAGE_SELECTION = '/package-selection';
   static const BOARD_SELECTION = '/board-selection';
   static const SUBJECT_SELECTION = '/subject-selection';
-  static const CHAPTER_SELECTION = '/chapter-selection';
   static const CART = '/cart';
   static const SUBJECT_CHAPTER_DETAIL = '/subject-chapter-detail';
   static const FULL_ASSESSMENT = '/full-assessment';

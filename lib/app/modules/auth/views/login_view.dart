@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 
@@ -35,44 +38,25 @@ class _LoginViewState extends State<LoginView> {
         children: [
           // Animated gradient background
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.primaryColor,
-                  AppTheme.primaryColor.withOpacity(0.8),
-                  AppTheme.secondaryColor.withOpacity(0.9),
-                  AppTheme.secondaryColor,
-                ],
-                stops: const [0.0, 0.3, 0.7, 1.0],
-              ),
+            decoration: UIUtils.meshGradientDecoration(
+              colors: [
+                AppTheme.primaryColor,
+                AppTheme.primaryColor.withValues(alpha: 0.9),
+                const Color(0xFF1E293B),
+                const Color(0xFF0F172A),
+              ],
             ),
           ),
-          // Decorative circles
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
-              ),
-            ),
+          // Animated Glow Blobs
+          const Positioned(
+            top: -50,
+            right: -50,
+            child: _AnimatedGlowBlob(color: Colors.white, size: 300),
           ),
-          Positioned(
-            bottom: -150,
-            left: -100,
-            child: Container(
-              width: 350,
-              height: 350,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
+          const Positioned(
+            bottom: -80,
+            left: -30,
+            child: _AnimatedGlowBlob(color: Colors.cyanAccent, size: 350),
           ),
           // Main content
           SafeArea(
@@ -85,23 +69,13 @@ class _LoginViewState extends State<LoginView> {
                     children: [
                       // Compact logo
                       Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
+                        padding: const EdgeInsets.all(12),
+                        decoration: UIUtils.glassDecoration(borderRadius: 50),
                         child: ClipOval(
                           child: Image.asset(
                             'assets/images/logo.png',
-                            width: 40,
-                            height: 40,
+                            width: 44,
+                            height: 44,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -261,41 +235,28 @@ class _LoginViewState extends State<LoginView> {
         final isSelected = selectedType == type;
 
         return GestureDetector(
-          onTap: () => selectedUserType.value = type,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            selectedUserType.value = type;
+          },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [color, color.withOpacity(0.7)],
-                    )
-                  : null,
-              color: isSelected ? null : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected ? color : Colors.grey[200]!,
-                width: isSelected ? 2 : 1.5,
-              ),
-              boxShadow: isSelected
-                  ? [
+            decoration: isSelected
+                ? UIUtils.glossyDecoration(baseColor: color, borderRadius: 16)
+                : BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[100]!, width: 1.5),
+                    boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.06),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
-            ),
+                  ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -319,7 +280,8 @@ class _LoginViewState extends State<LoginView> {
                   label,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                     color: isSelected ? Colors.white : const Color(0xFF1F2937),
                   ),
                   textAlign: TextAlign.center,
@@ -385,6 +347,7 @@ class _LoginViewState extends State<LoginView> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                HapticFeedback.mediumImpact();
                 Get.offAllNamed('/guest-dashboard');
               },
               style: ElevatedButton.styleFrom(
@@ -589,6 +552,7 @@ class _LoginViewState extends State<LoginView> {
                 onPressed: controller.isLoading.value
                     ? null
                     : () async {
+                        HapticFeedback.mediumImpact();
                         if (formKey.currentState!.validate()) {
                           await controller.login(
                             email: emailController.text,
@@ -603,7 +567,8 @@ class _LoginViewState extends State<LoginView> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  elevation: 0,
+                  elevation: 8,
+                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
                   disabledBackgroundColor: AppTheme.primaryColor.withOpacity(
                     0.6,
                   ),
@@ -683,5 +648,59 @@ class _LoginViewState extends State<LoginView> {
       case UserType.guest:
         return 'Guest';
     }
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.12),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

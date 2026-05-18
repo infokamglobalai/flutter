@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../data/models/qna_model.dart';
 import '../../../data/services/qna_service.dart';
 import '../controllers/mentor_chat_controller.dart';
+import 'dart:math' as math;
 
 /// Per-chapter Q&A chat view.
 /// Receives an optional [thread]. When null, shows subject/chapter picker first.
@@ -184,13 +187,34 @@ class _AskDoubtViewState extends State<AskDoubtView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: const Color(0xFF8B5CF6),
         elevation: 0,
+        flexibleSpace: FlexibleSpaceBar(
+          background: Stack(
+            children: [
+              Container(
+                decoration: UIUtils.glossyDecoration(
+                  baseColor: const Color(0xFF8B5CF6),
+                  borderRadius: 0,
+                  showBorder: false,
+                ),
+              ),
+              const Positioned(
+                top: -30,
+                right: -20,
+                child: _AnimatedGlowBlob(color: Colors.white, size: 120),
+              ),
+            ],
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Get.back(),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Get.back();
+          },
         ),
         title: Text(
           _thread != null
@@ -200,14 +224,18 @@ class _AskDoubtViewState extends State<AskDoubtView> {
               : (_chapterName != 'Q&A Chat' ? _chapterName : 'Ask a Doubt'),
           style: const TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
           ),
         ),
         actions: [
           if (_thread != null)
             IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: () => _reload(),
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                _reload();
+              },
             ),
         ],
       ),
@@ -225,27 +253,35 @@ class _AskDoubtViewState extends State<AskDoubtView> {
 
   Widget _buildChapterPicker() {
     return Container(
-      color: Colors.white,
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 0,
+        showBorder: false,
+      ).copyWith(
+        border: Border(
+          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+      ),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Select Subject & Chapter',
+            'SELECT SUBJECT & CHAPTER',
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF6B7280),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF64748B),
+              letterSpacing: 1.0,
             ),
           ),
           const SizedBox(height: 10),
           // Subject dropdown
           Obx(
             () => Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey[300]!),
+              decoration: UIUtils.glassDecoration(borderRadius: 12).copyWith(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey[300]!, width: 1.2),
               ),
               child: _ctrl.subjects.isEmpty
                   ? const Padding(
@@ -275,6 +311,7 @@ class _AskDoubtViewState extends State<AskDoubtView> {
                           )
                           .toList(),
                       onChanged: (v) {
+                        HapticFeedback.selectionClick();
                         setState(() {
                           _selectedSubject = v;
                           _selectedChapter = null;
@@ -325,6 +362,7 @@ class _AskDoubtViewState extends State<AskDoubtView> {
                             )
                             .toList(),
                         onChanged: (v) {
+                          HapticFeedback.selectionClick();
                           setState(() {
                             _selectedChapter = v;
                             if (v != null)
@@ -351,7 +389,15 @@ class _AskDoubtViewState extends State<AskDoubtView> {
         : _chapterName;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      color: Colors.white,
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 0,
+        showBorder: false,
+      ).copyWith(
+        border: Border(
+          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+      ),
       child: Row(
         children: [
           const Icon(Icons.menu_book, size: 16, color: Color(0xFF8B5CF6)),
@@ -378,18 +424,18 @@ class _AskDoubtViewState extends State<AskDoubtView> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
+            decoration: UIUtils.glassDecoration(borderRadius: 20).copyWith(
               color: t.hasUnanswered
-                  ? Colors.orange.withValues(alpha: 0.1)
-                  : Colors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+                  ? Colors.orange.withValues(alpha: 0.12)
+                  : Colors.green.withValues(alpha: 0.12),
             ),
             child: Text(
               t.hasUnanswered ? '${t.pendingCount} Pending' : 'All Answered',
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
                 color: t.hasUnanswered ? Colors.orange[800] : Colors.green[800],
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -528,22 +574,21 @@ class _AskDoubtViewState extends State<AskDoubtView> {
                   horizontal: 14,
                   vertical: 10,
                 ),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(18),
-                    topRight: const Radius.circular(18),
-                    bottomLeft: Radius.circular(isMe ? 18 : 4),
-                    bottomRight: Radius.circular(isMe ? 4 : 18),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                decoration: isMe
+                    ? UIUtils.glossyDecoration(
+                        baseColor: const Color(0xFF8B5CF6),
+                        borderRadius: 20,
+                      ).copyWith(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(20),
+                          bottomRight: Radius.circular(4),
+                        ),
+                      )
+                    : UIUtils.glassDecoration(borderRadius: 16).copyWith(
+                        color: Colors.white,
+                      ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -552,26 +597,28 @@ class _AskDoubtViewState extends State<AskDoubtView> {
                       style: TextStyle(
                         color: textColor,
                         fontSize: 14,
+                        fontWeight: isMe ? FontWeight.w500 : FontWeight.w600,
                         height: 1.45,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           timeago.format(time),
                           style: TextStyle(
-                            color: isMe ? Colors.white60 : Colors.grey[500],
+                            color: isMe ? Colors.white70 : Colors.grey[500],
                             fontSize: 10,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         if (isMe) ...[
                           const SizedBox(width: 4),
                           const Icon(
-                            Icons.done_all,
+                            Icons.done_all_rounded,
                             size: 13,
-                            color: Colors.white60,
+                            color: Colors.white70,
                           ),
                         ],
                       ],
@@ -599,10 +646,9 @@ class _AskDoubtViewState extends State<AskDoubtView> {
       padding: const EdgeInsets.only(left: 46),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
+        decoration: UIUtils.glassDecoration(borderRadius: 16).copyWith(
           color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange[200]!),
+          border: Border.all(color: Colors.orange[200]!, width: 1.2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -635,13 +681,16 @@ class _AskDoubtViewState extends State<AskDoubtView> {
         top: 10,
         bottom: MediaQuery.of(context).viewInsets.bottom + 10,
       ),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 0,
+        showBorder: false,
+      ).copyWith(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -651,10 +700,9 @@ class _AskDoubtViewState extends State<AskDoubtView> {
           Expanded(
             child: Container(
               constraints: const BoxConstraints(maxHeight: 120),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey[300]!),
+              decoration: UIUtils.glassDecoration(borderRadius: 24).copyWith(
+                color: const Color(0xFFF1F5F9),
+                border: Border.all(color: Colors.grey[200]!, width: 1.5),
               ),
               child: TextField(
                 controller: _inputCtrl,
@@ -681,9 +729,9 @@ class _AskDoubtViewState extends State<AskDoubtView> {
               ? Container(
                   width: 46,
                   height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.6),
-                    shape: BoxShape.circle,
+                  decoration: UIUtils.glossyDecoration(
+                    baseColor: const Color(0xFF8B5CF6).withValues(alpha: 0.6),
+                    borderRadius: 24,
                   ),
                   child: const Padding(
                     padding: EdgeInsets.all(12),
@@ -693,24 +741,86 @@ class _AskDoubtViewState extends State<AskDoubtView> {
                     ),
                   ),
                 )
-              : Material(
-                  color: const Color(0xFF8B5CF6),
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: _send,
-                    child: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 22,
+              : Container(
+                  decoration: UIUtils.glossyDecoration(
+                    baseColor: const Color(0xFF8B5CF6),
+                    borderRadius: 24,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _send();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ),
                 ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

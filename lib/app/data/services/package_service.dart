@@ -65,4 +65,28 @@ class PackageService {
       throw Exception('Unexpected error: $e');
     }
   }
+
+  /// Initiate payment through Ottu
+  Future<Map<String, dynamic>> initiatePayment(Map<String, dynamic> payload) async {
+    try {
+      final response = await _apiService.post(
+        ApiConstants.paymentOttuInitiate,
+        data: payload,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Failed to initiate payment: ${response.data['message']}');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Payment failed');
+      } else {
+        throw Exception('Network error: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Unexpected error: $e');
+    }
+  }
 }

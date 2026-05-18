@@ -18,7 +18,6 @@ import 'package:najahapp/app/modules/packages/bindings/package_binding.dart';
 import 'package:najahapp/app/modules/packages/views/package_selection_view.dart';
 import 'package:najahapp/app/modules/packages/views/board_selection_view.dart';
 import 'package:najahapp/app/modules/packages/views/subject_selection_view.dart';
-import 'package:najahapp/app/modules/packages/views/chapter_selection_view.dart';
 import 'package:najahapp/app/modules/packages/views/cart_view.dart';
 import 'package:najahapp/app/modules/learning/views/subject_chapter_detail_view.dart';
 import 'package:najahapp/app/modules/learning/views/video_player_view.dart'
@@ -304,11 +303,6 @@ class AppPages {
     GetPage(
       name: _Paths.SUBJECT_SELECTION,
       page: () => const SubjectSelectionView(),
-      binding: PackageBinding(),
-    ),
-    GetPage(
-      name: _Paths.CHAPTER_SELECTION,
-      page: () => const ChapterSelectionView(),
       binding: PackageBinding(),
     ),
     GetPage(

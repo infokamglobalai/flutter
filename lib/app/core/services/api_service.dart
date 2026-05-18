@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart' as dio;
+import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
@@ -24,6 +25,21 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+      ),
+    );
+
+    // Add Retry Interceptor for better network resilience
+    _dio.interceptors.add(
+      RetryInterceptor(
+        dio: _dio,
+        logPrint: print, // log retry attempts for debugging
+        retries: 3, // retry up to 3 times
+        retryDelays: const [
+          Duration(seconds: 1), // wait 1 sec before first retry
+          Duration(seconds: 2), // wait 2 sec before second retry
+          Duration(seconds: 3), // wait 3 sec before third retry
+        ],
+        retryableExtraStatuses: {408, 500, 502, 503, 504}, // retry on these status codes
       ),
     );
 

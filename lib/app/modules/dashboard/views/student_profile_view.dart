@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
@@ -75,14 +77,10 @@ class StudentProfileView extends GetView<DashboardController> {
 
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [const Color(0xFFE8F5E9), const Color(0xFFF1F8E9)],
-        ),
-        borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(24),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: AppTheme.secondaryColor,
+        borderRadius: 30,
       ),
       child: Column(
         children: [
@@ -132,15 +130,15 @@ class StudentProfileView extends GetView<DashboardController> {
                     Text(
                       profile.fullName ?? 'Student',
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1F2937),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       user?.email ?? '',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
                     ),
                   ],
                 ),
@@ -154,6 +152,7 @@ class StudentProfileView extends GetView<DashboardController> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
+                    HapticFeedback.lightImpact();
                     // Show student profile details in modal
                     Get.bottomSheet(
                       Container(
@@ -228,7 +227,10 @@ class StudentProfileView extends GetView<DashboardController> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _showEditProfileModal(user),
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    _showEditProfileModal(user);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -538,14 +540,16 @@ class StudentProfileView extends GetView<DashboardController> {
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 20,
+        showBorder: true,
+      ).copyWith(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -554,9 +558,10 @@ class StudentProfileView extends GetView<DashboardController> {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 4),

@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:lottie/lottie.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
 import 'package:najahapp/app/data/models/subscription_model.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -75,52 +81,68 @@ class _DashboardViewState extends State<DashboardView>
       final tab = controller.bottomNavIndex.value;
 
       return Scaffold(
-        backgroundColor: AppTheme.primaryColor,
-        body: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            _buildAppBar(context),
-            SliverToBoxAdapter(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Stack(
+          children: [
+            // Background Living UI
+            const Positioned(
+              top: 100,
+              right: -50,
+              child: _AnimatedGlowBlob(color: Color(0xFF8B5CF6), size: 250),
+            ),
+            const Positioned(
+              bottom: 100,
+              left: -50,
+              child: _AnimatedGlowBlob(color: Color(0xFFEC4899), size: 200),
+            ),
+            CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                _buildAppBar(context),
+                SliverToBoxAdapter(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(32),
+                        topRight: Radius.circular(32),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: guest
+                          ? [
+                              ..._buildGuestUserSections(context),
+                              const SizedBox(height: 24),
+                              _buildMarketingDocuments(context),
+                              const SizedBox(height: 24),
+                              _buildRegistrationForm(context),
+                              const SizedBox(height: 32),
+                            ]
+                          : [
+                              Obx(() {
+                                if (!controller
+                                    .notificationPermissionGranted
+                                    .value) {
+                                  return _buildNotificationPermissionBanner(
+                                    context,
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }),
+                              ..._buildSubscribedUserSections(context, tab),
+                              const SizedBox(height: 120), // Space for bottom nav
+                            ],
+                    ),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: guest
-                      ? [
-                          ..._buildGuestUserSections(context),
-                          const SizedBox(height: 24),
-                          _buildMarketingDocuments(context),
-                          const SizedBox(height: 24),
-                          _buildRegistrationForm(context),
-                          const SizedBox(height: 32),
-                        ]
-                      : [
-                          Obx(() {
-                            if (!controller
-                                .notificationPermissionGranted
-                                .value) {
-                              return _buildNotificationPermissionBanner(
-                                context,
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          }),
-                          ..._buildSubscribedUserSections(context, tab),
-                          const SizedBox(height: 100), // Space for bottom nav
-                        ],
-                ),
-              ),
+              ],
             ),
           ],
         ),
         bottomNavigationBar:
             guest ? null : _buildBottomNavigationBar(context),
+        extendBody: true,
       );
     });
   }
@@ -129,45 +151,61 @@ class _DashboardViewState extends State<DashboardView>
     return Obx(() {
       final selectedIndex = controller.bottomNavIndex.value;
       return Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        decoration: UIUtils.glossyDecoration(
+          baseColor: Colors.white,
+          borderRadius: 30,
+          showBorder: true,
+        ).copyWith(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 56,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  index: 0,
-                  selectedIndex: selectedIndex,
-                  color: AppTheme.primaryColor,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: SafeArea(
+              child: SizedBox(
+                height: 70,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      icon: Icons.home_rounded,
+                      label: 'Home',
+                      index: 0,
+                      selectedIndex: selectedIndex,
+                      color: AppTheme.primaryColor,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.school_rounded,
+                      label: 'Learn',
+                      index: 1,
+                      selectedIndex: selectedIndex,
+                      color: AppTheme.primaryColor,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.support_agent_rounded,
+                      label: 'Support',
+                      index: 2,
+                      selectedIndex: selectedIndex,
+                      color: AppTheme.primaryColor,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.analytics_rounded,
+                      label: 'Activity',
+                      index: 3,
+                      selectedIndex: selectedIndex,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ],
                 ),
-                _buildNavItem(
-                  icon: Icons.school_rounded,
-                  label: 'Learn',
-                  index: 1,
-                  selectedIndex: selectedIndex,
-                  color: AppTheme.primaryColor,
-                ),
-                _buildNavItem(
-                  icon: Icons.support_agent_rounded,
-                  label: 'Support',
-                  index: 2,
-                  selectedIndex: selectedIndex,
-                  color: AppTheme.primaryColor,
-                ),
-                _buildNavItem(
-                  icon: Icons.analytics_rounded,
-                  label: 'Activity',
-                  index: 3,
-                  selectedIndex: selectedIndex,
-                  color: AppTheme.primaryColor,
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -197,30 +235,31 @@ class _DashboardViewState extends State<DashboardView>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Top indicator line
-              Container(
-                height: 2,
-                width: 24,
-                decoration: BoxDecoration(
-                  color: isSelected ? color : Colors.transparent,
-                  borderRadius: BorderRadius.circular(1),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 4,
+                width: isSelected ? 24 : 0,
+                decoration: UIUtils.glossyDecoration(
+                  baseColor: color,
+                  borderRadius: 2,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               // Icon
               Icon(
                 icon,
-                color: isSelected ? color : Colors.grey[500],
-                size: 22,
+                color: isSelected ? color : const Color(0xFF64748B),
+                size: 24,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               // Label
               Text(
-                label,
+                label.toUpperCase(),
                 style: TextStyle(
                   fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? color : Colors.grey[600],
-                  letterSpacing: 0,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                  color: isSelected ? color : const Color(0xFF64748B),
+                  letterSpacing: 0.5,
                   height: 1,
                 ),
                 textAlign: TextAlign.center,
@@ -509,11 +548,12 @@ class _DashboardViewState extends State<DashboardView>
           Icon(icon, color: iconColor, size: 24),
           const SizedBox(width: 8),
           Text(
-            title,
+            title.toUpperCase(),
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+              letterSpacing: 1.0,
             ),
           ),
         ],
@@ -554,14 +594,32 @@ class _DashboardViewState extends State<DashboardView>
       elevation: 0,
       backgroundColor: AppTheme.primaryColor,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          color: AppTheme.primaryColor,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        background: Stack(
+          children: [
+            Container(
+              decoration: UIUtils.glossyDecoration(
+                baseColor: AppTheme.primaryColor,
+                borderRadius: 0,
+                showBorder: false,
+              ),
+            ),
+            const Positioned(
+              top: -30,
+              right: -20,
+              child: _AnimatedGlowBlob(color: Colors.white, size: 140),
+            ),
+            const Positioned(
+              bottom: 10,
+              left: -30,
+              child: _AnimatedGlowBlob(color: Colors.white, size: 100),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SafeArea(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Row(
@@ -597,9 +655,10 @@ class _DashboardViewState extends State<DashboardView>
                               return Text(
                                 displayName,
                                 style: TextStyle(
-                                  fontSize: isSmallScreen ? 20 : 24,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: isSmallScreen ? 22 : 26,
+                                  fontWeight: FontWeight.w900,
                                   color: Colors.white,
+                                  letterSpacing: -0.5,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -614,14 +673,15 @@ class _DashboardViewState extends State<DashboardView>
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                            decoration: UIUtils.glossyDecoration(
+                              baseColor: Colors.white,
+                              borderRadius: 14,
+                            ).copyWith(
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
@@ -676,17 +736,18 @@ class _DashboardViewState extends State<DashboardView>
                       Container(
                         width: isSmallScreen ? 44 : 48,
                         height: isSmallScreen ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
+                          decoration: UIUtils.glossyDecoration(
+                            baseColor: Colors.white,
+                            borderRadius: 24,
+                          ).copyWith(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
                         child: InkWell(
                           onTap: () => Get.toNamed(Routes.STUDENT_PROFILE),
                           borderRadius: BorderRadius.circular(24),
@@ -709,9 +770,11 @@ class _DashboardViewState extends State<DashboardView>
             ),
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  ),
+);
+}
 
   void _scrollToSubscriptions() {
     final context = _subscriptionsKey.currentContext;
@@ -738,13 +801,9 @@ class _DashboardViewState extends State<DashboardView>
     return Container(
       margin: EdgeInsets.fromLTRB(marginH, marginV, marginH, 0),
       height: isSmallScreen ? 200.0 : 220.0,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE8B384), Color(0xFFD9A46F)],
-        ),
-        borderRadius: BorderRadius.circular(borderRadius),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: const Color(0xFFFDBA74), // Warm orange
+        borderRadius: borderRadius,
       ),
       child: Stack(
         children: [
@@ -763,42 +822,48 @@ class _DashboardViewState extends State<DashboardView>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Learn anytime &\nanywhere',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 22.0 : 26.0,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                          height: 1.1,
+                        Text(
+                          'Learn anytime &\nanywhere',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 24.0 : 28.0,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF1E293B),
+                            height: 1.1,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
                       SizedBox(height: isSmallScreen ? 6 : 8),
-                      Text(
-                        'start learning new skill and\ngrowing your skill.',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11.0 : 12.0,
-                          color: const Color(0xFF1F2937),
-                          height: 1.3,
+                        Text(
+                          'start learning new skill and\ngrowing your skill.',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 11.0 : 12.0,
+                            color: const Color(0xFF334155),
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   // Arrow Button
                   Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    elevation: 0,
-                    child: InkWell(
-                      onTap: _scrollToSubscriptions,
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: isSmallScreen ? 44 : 50,
-                        height: isSmallScreen ? 44 : 50,
-                        padding: const EdgeInsets.all(10),
-                        child: Image.asset(
-                          'assets/images/up_arrow.png',
-                          fit: BoxFit.contain,
+                    color: Colors.transparent,
+                    child: Container(
+                      decoration: UIUtils.glossyDecoration(
+                        baseColor: Colors.white,
+                        borderRadius: 25,
+                      ),
+                      child: InkWell(
+                        onTap: _scrollToSubscriptions,
+                        borderRadius: BorderRadius.circular(25),
+                        child: Container(
+                          width: isSmallScreen ? 44 : 50,
+                          height: isSmallScreen ? 44 : 50,
+                          padding: const EdgeInsets.all(10),
+                          child: Image.asset(
+                            'assets/images/up_arrow.png',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
@@ -806,7 +871,6 @@ class _DashboardViewState extends State<DashboardView>
                 ],
               ),
             ),
-
           ),
           // Woman Image - Right Side
           Positioned(
@@ -2190,134 +2254,6 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  Widget _buildStatChip(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactStatItem(
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompactStatColumn(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 16),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            color: Colors.white.withOpacity(0.8),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
   IconData _getSubjectIcon(String subject) {
     switch (subject.toLowerCase()) {
       case 'mathematics':
@@ -2405,10 +2341,9 @@ class _DashboardViewState extends State<DashboardView>
         child: Container(
           height: 100,
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: color,
+            borderRadius: 16,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2417,18 +2352,19 @@ class _DashboardViewState extends State<DashboardView>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Icon(icon, size: 24, color: Colors.white),
               ),
               const SizedBox(height: 8),
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.9),
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -2461,46 +2397,39 @@ class _DashboardViewState extends State<DashboardView>
           end: Alignment.bottomRight,
           colors: [
             AppTheme.primaryColor,
-            AppTheme.primaryColor.withOpacity(0.9),
-            AppTheme.secondaryColor,
+            AppTheme.primaryColor.withValues(alpha: 0.95),
+            const Color(0xFF1E293B),
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
-            blurRadius: isSmallScreen ? 16 : 20,
-            offset: Offset(0, isSmallScreen ? 6 : 8),
+            color: AppTheme.primaryColor.withValues(alpha: 0.4),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.1),
+            blurRadius: 0,
+            offset: const Offset(2, 2),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Decorative circles
-          Positioned(
-            top: -30,
-            right: -30,
-            child: Container(
-              width: isSmallScreen ? 100.0 : 120.0,
-              height: isSmallScreen ? 100.0 : 120.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Stack(
+          children: [
+            // Animated Glow Blobs
+            const Positioned(
+              top: -50,
+              right: -50,
+              child: _AnimatedGlowBlob(color: Colors.white, size: 200),
             ),
-          ),
-          Positioned(
-            bottom: -20,
-            left: -20,
-            child: Container(
-              width: isSmallScreen ? 80.0 : 100.0,
-              height: isSmallScreen ? 80.0 : 100.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
+            const Positioned(
+              bottom: -80,
+              left: -30,
+              child: _AnimatedGlowBlob(color: Colors.cyanAccent, size: 250),
             ),
-          ),
           // Content
           Center(
             child: Column(
@@ -2560,19 +2489,14 @@ class _DashboardViewState extends State<DashboardView>
           ),
         ],
       ),
+    ),
     );
   }
 
   Widget _buildPackagesCTA(BuildContext context) {
     return Obx(() {
       if (controller.isLoadingPackages.value) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          height: 200,
-          child: Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryColor),
-          ),
-        );
+        return _buildShimmerPackageList(isCompetitive: false);
       }
 
       if (controller.packagesError.value.isNotEmpty) {
@@ -2618,182 +2542,76 @@ class _DashboardViewState extends State<DashboardView>
       }
 
       final packages = controller.publicPackages;
+      final regularPackages = packages.where((p) => !p.isCompetitiveExam).toList();
+      final competitivePackages = packages.where((p) => p.isCompetitiveExam).toList();
 
-      // Filter packages
-      final regularPackages = packages
-          .where((p) => !p.isCompetitiveExam)
-          .toList();
-      final competitivePackages = packages
-          .where((p) => p.isCompetitiveExam)
-          .toList();
-
-      if (packages.isEmpty) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryColor.withOpacity(0.1),
-                AppTheme.secondaryColor.withOpacity(0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.inventory_2_outlined,
-                color: AppTheme.primaryColor,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No Packages Available',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Check back later for new learning packages',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        );
-      }
+      if (packages.isEmpty) return const SizedBox.shrink();
 
       return Column(
         children: [
-          // Regular Packages Section
-          if (regularPackages.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Clean header design
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Available Packages',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  'Choose your perfect learning path',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${regularPackages.length} packages',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => Get.toNamed(Routes.ALL_PACKAGES),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey[600],
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          'View All',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // 3x2 Grid Layout for packages
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.75,
-                        ),
-                    itemCount: regularPackages.length > 6
-                        ? 6
-                        : regularPackages.length,
-                    itemBuilder: (context, index) {
-                      final package = regularPackages[index];
-                      return _buildPublicPackageCard(context, package, index);
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-          // Competitive Exams Section
+          if (regularPackages.isNotEmpty) _buildPublicPackagesSection(context, regularPackages),
           if (competitivePackages.isNotEmpty) ...[
             const SizedBox(height: 32),
-            _buildCompetitiveExamsSection(context, competitivePackages),
+            _buildCompetitivePackagesSection(context, competitivePackages),
           ],
         ],
       );
     });
   }
 
-  Widget _buildCompetitiveExamsSection(
-    BuildContext context,
-    List<PackageModel> competitivePackages,
-  ) {
+  Widget _buildPublicPackagesSection(BuildContext context, List<PackageModel> regularPackages) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Available Packages',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937), height: 1.2),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose your perfect learning path',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Get.toNamed(Routes.ALL_PACKAGES),
+                child: Text('View All', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[600])),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.75,
+            ),
+            itemCount: regularPackages.length > 6 ? 6 : regularPackages.length,
+            itemBuilder: (context, index) => _buildPublicPackageCard(context, regularPackages[index], index),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompetitivePackagesSection(BuildContext context, List<PackageModel> competitivePackages) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2804,92 +2622,50 @@ class _DashboardViewState extends State<DashboardView>
                   children: [
                     const Text(
                       'Competitive Exam',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1F2937),
-                        height: 1.2,
-                      ),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937), height: 1.2),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          'Prepare for JEE, NEET & more...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${competitivePackages.length} Programs',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Prepare for JEE, NEET & more...',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
               ),
               TextButton(
                 onPressed: () => Get.toNamed(Routes.ALL_PACKAGES),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
-                  ),
-                ),
+                child: Text('View All', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[600])),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          // Horizontal list of cards
-          ...competitivePackages
-              .take(2)
-              .map(
-                (package) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildCompetitivePackageCard(context, package),
-                ),
-              ),
+          ...competitivePackages.take(2).map((p) => Padding(padding: const EdgeInsets.only(bottom: 16), child: _buildCompetitivePackageCard(context, p))),
         ],
       ),
     );
   }
 
-  Widget _buildCompetitivePackageCard(
-    BuildContext context,
-    PackageModel package,
-  ) {
+  Widget _buildShimmerPackageList({required bool isCompetitive}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: isCompetitive 
+        ? Column(children: List.generate(2, (_) => Container(height: 112, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))))
+        : GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.75),
+            itemCount: 6,
+            itemBuilder: (_, __) => Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
+          ),
+    );
+  }
+
+  Widget _buildCompetitivePackageCard(BuildContext context, PackageModel package) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          Get.toNamed('/package-selection', arguments: package);
-        },
+        onTap: () => Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package),
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -2897,70 +2673,36 @@ class _DashboardViewState extends State<DashboardView>
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2)),
             ],
           ),
           child: Row(
             children: [
-              // Image on left
               Container(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF4E6),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFFFFF4E6), borderRadius: BorderRadius.circular(16)),
                 child: package.imageUrl.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          package.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Icon(
-                                Icons.emoji_events_rounded,
-                                color: Colors.orange[300],
-                                size: 36,
-                              ),
-                            );
-                          },
+                    ? Hero(
+                        tag: 'package_${package.id}',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(package.imageUrl, fit: BoxFit.cover),
                         ),
                       )
-                    : Center(
-                        child: Icon(
-                          Icons.emoji_events_rounded,
-                          color: Colors.orange[300],
-                          size: 36,
-                        ),
-                      ),
+                    : Icon(Icons.emoji_events_rounded, color: Colors.orange[300], size: 36),
               ),
               const SizedBox(width: 16),
-              // Title in center
               Expanded(
                 child: Text(
                   package.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
-                    height: 1.3,
-                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 12),
-              // Arrow on right
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: Colors.grey[400],
-                size: 24,
-              ),
+              Icon(Icons.arrow_forward_rounded, color: Colors.grey[400], size: 24),
             ],
           ),
         ),
@@ -2968,83 +2710,51 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  Widget _buildPublicPackageCard(
-    BuildContext context,
-    PackageModel package,
-    int index,
-  ) {
+  Widget _buildPublicPackageCard(BuildContext context, PackageModel package, int index) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          Get.toNamed('/package-selection', arguments: package);
-        },
+        onTap: () => Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package),
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // Image placeholder area
               Expanded(
                 flex: 5,
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
                   ),
                   child: package.imageUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                          child: Image.network(
-                            package.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(color: Colors.grey[100]);
-                            },
+                      ? Hero(
+                          tag: 'package_${package.id}',
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                            child: Image.network(package.imageUrl, fit: BoxFit.cover),
                           ),
                         )
                       : null,
                 ),
               ),
-
-              // Package name section
               Expanded(
                 flex: 5,
-                child: Container(
-                  width: double.infinity,
+                child: Padding(
                   padding: const EdgeInsets.all(10),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      package.name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2937),
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  child: Text(
+                    package.name,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1F2937), height: 1.3),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -4215,6 +3925,60 @@ class _DashboardViewState extends State<DashboardView>
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

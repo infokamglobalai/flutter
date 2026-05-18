@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/modules/support/controllers/ticket_controller.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
 
 class MyTicketsView extends GetView<TicketController> {
   const MyTicketsView({super.key});
@@ -26,13 +29,40 @@ class MyTicketsView extends GetView<TicketController> {
           _buildTicketsList(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.toNamed(Routes.RAISE_TICKET),
-        backgroundColor: const Color(0xFFEC4899),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text(
-          'New Ticket',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      floatingActionButton: GestureDetector(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          Get.toNamed(Routes.RAISE_TICKET);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: const Color(0xFFEC4899),
+            borderRadius: 30,
+          ).copyWith(
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFEC4899).withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'NEW TICKET',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -51,26 +81,17 @@ class MyTicketsView extends GetView<TicketController> {
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFEC4899), Color(0xFFDB2777)],
-            ),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: const Color(0xFFEC4899),
+            borderRadius: 0,
+            showBorder: false,
           ),
           child: Stack(
             children: [
-              Positioned(
+              const Positioned(
                 top: -40,
                 right: -30,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.1),
-                  ),
-                ),
+                child: _AnimatedGlowBlob(color: Colors.white, size: 140),
               ),
               Positioned(
                 bottom: 16,
@@ -83,9 +104,10 @@ class MyTicketsView extends GetView<TicketController> {
                     Text(
                       'My Support Tickets',
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
+                        letterSpacing: -0.5,
                       ),
                     ),
                     SizedBox(height: 4),
@@ -149,14 +171,16 @@ class MyTicketsView extends GetView<TicketController> {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 20,
+        showBorder: true,
+      ).copyWith(
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: color.withValues(alpha: 0.12),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -168,17 +192,19 @@ class MyTicketsView extends GetView<TicketController> {
             value,
             style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
               color: color,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            label,
+            label.toUpperCase(),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
             ),
           ),
         ],
@@ -241,33 +267,38 @@ class MyTicketsView extends GetView<TicketController> {
     final statusColor = _getStatusColor(ticket.status);
     final priorityColor = _getPriorityColor(ticket.priority);
 
-    return InkWell(
-      onTap: () => Get.toNamed('/ticket-details/${ticket.id}'),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 24,
+        showBorder: true,
+      ).copyWith(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Get.toNamed('/ticket-details/${ticket.id}');
+        },
+        borderRadius: BorderRadius.circular(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+              decoration: UIUtils.glassDecoration(borderRadius: 24).copyWith(
+                color: statusColor.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
               ),
               child: Row(
@@ -277,16 +308,17 @@ class MyTicketsView extends GetView<TicketController> {
                       horizontal: 10,
                       vertical: 6,
                     ),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(8),
+                    decoration: UIUtils.glossyDecoration(
+                      baseColor: statusColor,
+                      borderRadius: 10,
                     ),
                     child: Text(
-                      controller.getStatusLabel(ticket.status),
+                      controller.getStatusLabel(ticket.status).toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -296,17 +328,17 @@ class MyTicketsView extends GetView<TicketController> {
                       horizontal: 10,
                       vertical: 6,
                     ),
-                    decoration: BoxDecoration(
-                      color: priorityColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: priorityColor),
+                    decoration: UIUtils.glassDecoration(borderRadius: 10).copyWith(
+                      color: priorityColor.withValues(alpha: 0.15),
+                      border: Border.all(color: priorityColor.withValues(alpha: 0.3), width: 1.5),
                     ),
                     child: Text(
-                      controller.getPriorityLabel(ticket.priority),
+                      controller.getPriorityLabel(ticket.priority).toUpperCase(),
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
                         color: priorityColor,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -373,9 +405,10 @@ class MyTicketsView extends GetView<TicketController> {
                   Text(
                     ticket.subject,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -508,5 +541,59 @@ class MyTicketsView extends GetView<TicketController> {
     } else {
       return DateFormat('MMM d, yyyy').format(date);
     }
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

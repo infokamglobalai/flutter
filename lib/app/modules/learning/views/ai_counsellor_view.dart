@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/learning/controllers/ai_counsellor_controller.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
+import 'dart:math' as math;
 
 class AiCounsellorView extends StatelessWidget {
   const AiCounsellorView({super.key});
@@ -17,18 +20,21 @@ class AiCounsellorView extends StatelessWidget {
       final active = c.page.value == id;
       return InkWell(
         borderRadius: BorderRadius.circular(999),
-        onTap: () => c.page.value = id,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          c.page.value = id;
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.white.withOpacity(0.18),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: active
-                  ? Colors.white.withOpacity(0.85)
-                  : Colors.white.withOpacity(0.25),
-            ),
-          ),
+          decoration: active
+              ? UIUtils.glossyDecoration(
+                  baseColor: Colors.white,
+                  borderRadius: 999,
+                )
+              : UIUtils.glassDecoration(borderRadius: 999).copyWith(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -61,14 +67,16 @@ class AiCounsellorView extends StatelessWidget {
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 20,
+        showBorder: true,
+      ).copyWith(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -77,9 +85,9 @@ class AiCounsellorView extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
+            decoration: UIUtils.glossyDecoration(
+              baseColor: color.withValues(alpha: 0.15),
+              borderRadius: 12,
             ),
             child: Icon(icon, color: color),
           ),
@@ -129,15 +137,36 @@ class AiCounsellorView extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(16),
-          ),
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: isCounsellor
+              ? UIUtils.glossyDecoration(
+                  baseColor: const Color(0xFF7C3AED),
+                  borderRadius: 20,
+                ).copyWith(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(4),
+                  ),
+                )
+              : isUser
+                  ? UIUtils.glossyDecoration(
+                      baseColor: AppTheme.primaryColor,
+                      borderRadius: 20,
+                    ).copyWith(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(4),
+                      ),
+                    )
+                  : UIUtils.glassDecoration(borderRadius: 16),
           child: Text(
             content,
-            style: TextStyle(color: fg, fontSize: 13, height: 1.35),
+            style: TextStyle(color: fg, fontSize: 14, height: 1.45),
           ),
         ),
       ),
@@ -158,7 +187,25 @@ class AiCounsellorView extends StatelessWidget {
           return Text('AI Counsellor • $name');
         }),
         backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: FlexibleSpaceBar(
+          background: Stack(
+            children: [
+              Container(
+                decoration: UIUtils.glossyDecoration(
+                  baseColor: AppTheme.primaryColor,
+                  borderRadius: 0,
+                  showBorder: false,
+                ),
+              ),
+              const Positioned(
+                top: -30,
+                right: -20,
+                child: _AnimatedGlowBlob(color: Colors.white, size: 120),
+              ),
+            ],
+          ),
+        ),
         actions: [
           Obx(() {
             final enabled = c.voiceOutputEnabled.value;
@@ -186,10 +233,13 @@ class AiCounsellorView extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
+            decoration: UIUtils.glossyDecoration(
+              baseColor: AppTheme.primaryColor,
+              borderRadius: 0,
+              showBorder: false,
+            ).copyWith(
               border: Border(
-                bottom: BorderSide(color: Colors.black.withOpacity(0.06)),
+                bottom: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
               ),
             ),
             child: SingleChildScrollView(
@@ -315,11 +365,13 @@ class AiCounsellorView extends StatelessWidget {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                          decoration: UIUtils.glossyDecoration(
+                            baseColor: Colors.white,
+                            borderRadius: 20,
+                            showBorder: true,
+                          ).copyWith(
                             border: Border.all(
-                              color: const Color(0xFFEF4444).withOpacity(0.25),
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.15),
                             ),
                           ),
                           child: Column(
@@ -419,14 +471,15 @@ class AiCounsellorView extends StatelessWidget {
                         Container(
                           width: 130,
                           height: 130,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                          decoration: UIUtils.glossyDecoration(
+                            baseColor: Colors.white,
+                            borderRadius: 65,
+                          ).copyWith(
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 25,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
@@ -466,13 +519,20 @@ class AiCounsellorView extends StatelessWidget {
                             child: ElevatedButton.icon(
                               onPressed: busy ? null : c.toggleVoiceSession,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    listening ? Colors.red : AppTheme.primaryColor,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
                               ),
-                              icon: Icon(listening ? Icons.stop_rounded : Icons.mic_rounded),
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: UIUtils.glossyDecoration(
+                                  baseColor: listening ? Colors.red : AppTheme.primaryColor,
+                                  borderRadius: 12,
+                                ),
+                                child: Icon(listening ? Icons.stop_rounded : Icons.mic_rounded, color: Colors.white),
+                              ),
                               label: Text(busy ? 'Thinking…' : (listening ? 'Stop' : 'Start')),
                             ),
                           );
@@ -651,6 +711,60 @@ class AiCounsellorView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

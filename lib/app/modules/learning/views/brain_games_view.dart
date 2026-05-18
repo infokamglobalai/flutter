@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import '../controllers/brain_games_controller.dart';
+import 'dart:math' as math;
 
 class BrainGamesView extends GetView<BrainGamesController> {
   const BrainGamesView({super.key});
@@ -8,7 +11,7 @@ class BrainGamesView extends GetView<BrainGamesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
           _buildAppBar(context),
@@ -40,42 +43,22 @@ class BrainGamesView extends GetView<BrainGamesController> {
         background: Stack(
           children: [
             Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFFEF4444),
-                    const Color(0xFFEF4444).withValues(alpha: 0.9),
-                    const Color(0xFFDC2626).withValues(alpha: 0.85),
-                  ],
-                ),
+              decoration: UIUtils.glossyDecoration(
+                baseColor: const Color(0xFFEF4444),
+                borderRadius: 0,
+                showBorder: false,
               ),
             ),
             // Decorative elements
-            Positioned(
+            const Positioned(
               top: -40,
               right: -30,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
+              child: _AnimatedGlowBlob(color: Colors.white, size: 160),
             ),
-            Positioned(
+            const Positioned(
               bottom: -30,
               left: -40,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.08),
-                ),
-              ),
+              child: _AnimatedGlowBlob(color: Colors.white, size: 120),
             ),
             // Content
             Positioned(
@@ -86,18 +69,8 @@ class BrainGamesView extends GetView<BrainGamesController> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.3),
-                          Colors.white.withValues(alpha: 0.15),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
+                    decoration: UIUtils.glassDecoration(borderRadius: 16).copyWith(
+                      color: Colors.white.withValues(alpha: 0.25),
                     ),
                     child: const Icon(
                       Icons.psychology_rounded,
@@ -115,9 +88,9 @@ class BrainGamesView extends GetView<BrainGamesController> {
                           'Brain Games',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                           ),
                         ),
                         SizedBox(height: 4),
@@ -174,19 +147,16 @@ class BrainGamesView extends GetView<BrainGamesController> {
         return Container(
           margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFFFF5F5)],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white, width: 2),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: Colors.white,
+            borderRadius: 24,
+            showBorder: true,
+          ).copyWith(
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.08),
                 blurRadius: 20,
-                offset: const Offset(0, 6),
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -197,18 +167,9 @@ class BrainGamesView extends GetView<BrainGamesController> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                    decoration: UIUtils.glossyDecoration(
+                      baseColor: const Color(0xFFEF4444),
+                      borderRadius: 14,
                     ),
                     child: const Icon(
                       Icons.workspace_premium_rounded,
@@ -245,11 +206,9 @@ class BrainGamesView extends GetView<BrainGamesController> {
                       horizontal: 12,
                       vertical: 6,
                     ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.orange[400]!, Colors.orange[600]!],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                    decoration: UIUtils.glossyDecoration(
+                      baseColor: Colors.orange[500]!,
+                      borderRadius: 20,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -381,41 +340,22 @@ class BrainGamesView extends GetView<BrainGamesController> {
                           horizontal: 20,
                           vertical: 10,
                         ),
-                        decoration: BoxDecoration(
-                          gradient: isSelected
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xFFEF4444),
-                                    Color(0xFFDC2626),
-                                  ],
-                                )
-                              : null,
-                          color: isSelected ? null : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? Colors.transparent
-                                : Colors.grey[300]!,
-                            width: 1.5,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFFEF4444,
-                                    ).withValues(alpha: 0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : [],
-                        ),
+                        decoration: isSelected
+                            ? UIUtils.glossyDecoration(
+                                baseColor: const Color(0xFFEF4444),
+                                borderRadius: 20,
+                              )
+                            : UIUtils.glassDecoration(borderRadius: 20).copyWith(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                              ),
                         child: Text(
                           category,
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : Colors.grey[700],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: isSelected ? Colors.white : Colors.grey[600],
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -477,28 +417,23 @@ class BrainGamesView extends GetView<BrainGamesController> {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        onTap: () => controller.playGame(game),
-        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          controller.playGame(game);
+        },
+        borderRadius: BorderRadius.circular(24),
         child: Container(
           padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFFAFBFF)],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey[200]!, width: 1.5),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: Colors.white,
+            borderRadius: 24,
+            showBorder: true,
+          ).copyWith(
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: 0.08),
+                color: color.withValues(alpha: 0.05),
                 blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -507,20 +442,9 @@ class BrainGamesView extends GetView<BrainGamesController> {
               Container(
                 width: 70,
                 height: 70,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color, color.withValues(alpha: 0.8)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                decoration: UIUtils.glossyDecoration(
+                  baseColor: color,
+                  borderRadius: 18,
                 ),
                 child: Icon(
                   _getIconData(game['icon'] as String),
@@ -540,8 +464,9 @@ class BrainGamesView extends GetView<BrainGamesController> {
                             game['title'],
                             style: const TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1F2937),
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1E293B),
+                              letterSpacing: -0.5,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -552,25 +477,17 @@ class BrainGamesView extends GetView<BrainGamesController> {
                             horizontal: 8,
                             vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: _getDifficultyColor(
-                              game['difficulty'] as String,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _getDifficultyColor(
-                                game['difficulty'] as String,
-                              ).withValues(alpha: 0.3),
+                            decoration: UIUtils.glassDecoration(borderRadius: 8).copyWith(
+                              color: _getDifficultyColor(game['difficulty'] as String).withValues(alpha: 0.12),
+                              border: Border.all(color: _getDifficultyColor(game['difficulty'] as String).withValues(alpha: 0.3), width: 1.2),
                             ),
-                          ),
                           child: Text(
                             game['difficulty'],
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: _getDifficultyColor(
-                                game['difficulty'] as String,
-                              ),
+                              fontWeight: FontWeight.w900,
+                              color: _getDifficultyColor(game['difficulty'] as String),
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
@@ -654,12 +571,11 @@ class BrainGamesView extends GetView<BrainGamesController> {
               const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                decoration: UIUtils.glassDecoration(borderRadius: 12).copyWith(
+                  color: color.withValues(alpha: 0.08),
                 ),
                 child: Icon(
-                  Icons.arrow_forward_rounded,
+                  Icons.play_arrow_rounded,
                   color: color,
                   size: 20,
                 ),
@@ -746,5 +662,59 @@ class BrainGamesView extends GetView<BrainGamesController> {
         gameId.startsWith('reflex_') ||
         gameId.startsWith('pattern_') ||
         gameId.startsWith('sequence_');
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

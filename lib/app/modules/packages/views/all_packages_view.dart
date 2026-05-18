@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/packages/controllers/all_packages_controller.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
+import 'dart:math' as math;
 
 class AllPackagesView extends GetView<AllPackagesController> {
   const AllPackagesView({super.key});
@@ -11,527 +14,380 @@ class AllPackagesView extends GetView<AllPackagesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          'All Packages',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
+      backgroundColor: const Color(0xFF0F172A), // Premium Dark Deep Navy
+      body: Stack(
+        children: [
+          // Background Decorative Elements
+          _buildBackgroundDecoration(),
+          
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildAppBar(),
+              _buildContent(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundDecoration() {
+    return Stack(
+      children: [
+        // Top right mesh glow
+        Positioned(
+          top: -150,
+          right: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppTheme.primaryColor.withOpacity(0.15),
+                  AppTheme.primaryColor.withOpacity(0),
+                ],
+              ),
+            ),
           ),
         ),
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.grey[800],
-            size: 20,
+        // Bottom left mesh glow
+        Positioned(
+          bottom: -100,
+          left: -100,
+          child: Container(
+            width: 350,
+            height: 350,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppTheme.accentColor.withOpacity(0.1),
+                  AppTheme.accentColor.withOpacity(0),
+                ],
+              ),
+            ),
           ),
-          onPressed: () => Get.back(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ColorFilter.mode(Colors.white.withOpacity(0.1), BlendMode.overlay),
+            child: Container(
+              color: Colors.white.withOpacity(0.05),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                onPressed: () => Get.back(),
+              ),
+            ),
+          ),
         ),
       ),
-      body: Obx(() {
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+        centerTitle: false,
+        title: const Text(
+          'Learning Packages',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: -0.5,
+          ),
+        ),
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A),
+                const Color(0xFF0F172A).withOpacity(0),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SliverToBoxAdapter(
+      child: Obx(() {
         if (controller.isLoading.value) {
-          return Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryColor),
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 100),
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
           );
         }
 
         if (controller.error.value.isNotEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    color: Colors.red.shade400,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Failed to load packages',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    controller.error.value,
-                    style: TextStyle(fontSize: 14, color: Colors.red.shade700),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => controller.loadPackages(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _buildErrorState();
         }
 
         final regularPackages = controller.regularPackages;
         final competitivePackages = controller.competitivePackages;
 
         if (regularPackages.isEmpty && competitivePackages.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    color: AppTheme.primaryColor,
-                    size: 80,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'No Packages Available',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Check back later for new learning packages',
-                    style: TextStyle(fontSize: 15, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _buildEmptyState();
         }
 
-        return CustomScrollView(
-          slivers: [
-            // Regular Packages Section
-            if (regularPackages.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.school_rounded,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Academic Packages',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text(
-                    '${regularPackages.length} package${regularPackages.length != 1 ? 's' : ''} available',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildPackageCard(
-                        context,
-                        regularPackages[index],
-                        index,
-                      ),
-                    );
-                  }, childCount: regularPackages.length),
-                ),
-              ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (regularPackages.isNotEmpty) ...[
+                _buildSectionHeader('Academic Excellence', Icons.school_rounded, AppTheme.primaryColor),
+                const SizedBox(height: 16),
+                ...regularPackages.asMap().entries.map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildPackageCard(entry.value, entry.key, AppTheme.primaryColor),
+                )),
+              ],
+              
+              if (competitivePackages.isNotEmpty) ...[
+                const SizedBox(height: 32),
+                _buildSectionHeader('Competitive Edge', Icons.emoji_events_rounded, AppTheme.accentColor),
+                const SizedBox(height: 16),
+                ...competitivePackages.asMap().entries.map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildPackageCard(entry.value, entry.key, AppTheme.accentColor),
+                )),
+              ],
+              
+              const SizedBox(height: 100),
             ],
-
-            // Competitive Exams Section
-            if (competitivePackages.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    regularPackages.isNotEmpty ? 24 : 16,
-                    16,
-                    8,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.emoji_events_rounded,
-                        color: AppTheme.accentColor,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Competitive Exams',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text(
-                    '${competitivePackages.length} program${competitivePackages.length != 1 ? 's' : ''} • JEE, NEET & more',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildCompetitivePackageCard(
-                        context,
-                        competitivePackages[index],
-                        index,
-                      ),
-                    );
-                  }, childCount: competitivePackages.length),
-                ),
-              ),
-            ],
-
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-          ],
+          ),
         );
       }),
     );
   }
 
-  Widget _buildPackageCard(
-    BuildContext context,
-    PackageModel package,
-    int index,
-  ) {
-    final colors = [
-      AppTheme.primaryColor,
-      AppTheme.secondaryColor,
-      AppTheme.accentColor,
-    ];
-    final color = colors[index % colors.length];
-    final isExpanded = false.obs;
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.3), width: 1),
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
 
-    return Obx(
-      () => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package);
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      // Package Image
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          image: package.imageUrl.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(package.imageUrl),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: package.imageUrl.isEmpty
-                            ? Icon(Icons.school_rounded, color: color, size: 36)
-                            : null,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              package.name,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              package.description,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                height: 1.4,
-                              ),
-                              maxLines: isExpanded.value ? null : 2,
-                              overflow: isExpanded.value
-                                  ? null
-                                  : TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Colors.grey[400],
-                        size: 18,
-                      ),
-                    ],
+  Widget _buildPackageCard(PackageModel package, int index, Color baseColor) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package);
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: UIUtils.glossyDecoration(
+          baseColor: Colors.white.withOpacity(0.05),
+          borderRadius: 24,
+          showBorder: true,
+        ).copyWith(
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Subtle Inner Glow
+              Positioned(
+                top: -20,
+                right: -20,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        baseColor.withOpacity(0.1),
+                        baseColor.withOpacity(0),
+                      ],
+                    ),
                   ),
                 ),
-                // Expandable section
-                if (package.description.length > 100)
-                  InkWell(
-                    onTap: () => isExpanded.value = !isExpanded.value,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    // Icon/Image
+                    Container(
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(18),
-                          bottomRight: Radius.circular(18),
-                        ),
+                        color: baseColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: baseColor.withOpacity(0.2), width: 1),
+                        image: package.imageUrl.isNotEmpty
+                            ? DecorationImage(image: NetworkImage(package.imageUrl), fit: BoxFit.cover)
+                            : null,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: package.imageUrl.isEmpty
+                          ? Icon(Icons.auto_stories_rounded, color: baseColor, size: 36)
+                          : null,
+                    ),
+                    const SizedBox(width: 20),
+                    
+                    // Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isExpanded.value
-                                ? 'Show Less'
-                                : 'Read Full Description',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: color,
+                            package.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            isExpanded.value
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: color,
-                            size: 20,
+                          const SizedBox(height: 6),
+                          Text(
+                            package.description,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[400],
+                              height: 1.4,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _buildBadge(
+                                '${package.validityDays} Days',
+                                Icons.timer_outlined,
+                                baseColor,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildBadge(
+                                '${package.subjects.length} Subjects',
+                                Icons.book_rounded,
+                                baseColor,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompetitivePackageCard(
-    BuildContext context,
-    PackageModel package,
-    int index,
-  ) {
-    final colors = [
-      AppTheme.accentColor,
-      const Color(0xFFE91E63),
-      const Color(0xFF9C27B0),
-    ];
-    final color = colors[index % colors.length];
-    final isExpanded = false.obs;
-
-    return Obx(
-      () => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Get.toNamed(Routes.PACKAGE_SELECTION, arguments: package);
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      // Package Image
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          image: package.imageUrl.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(package.imageUrl),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: package.imageUrl.isEmpty
-                            ? Icon(
-                                Icons.emoji_events_rounded,
-                                color: color,
-                                size: 36,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              package.name,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              package.description,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                height: 1.4,
-                              ),
-                              maxLines: isExpanded.value ? null : 2,
-                              overflow: isExpanded.value
-                                  ? null
-                                  : TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Colors.grey[400],
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-                // Expandable section
-                if (package.description.length > 100)
-                  InkWell(
-                    onTap: () => isExpanded.value = !isExpanded.value,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(18),
-                          bottomRight: Radius.circular(18),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            isExpanded.value
-                                ? 'Show Less'
-                                : 'Read Full Description',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            isExpanded.value
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: color,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+  Widget _buildBadge(String text, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 100, left: 32, right: 32),
+        child: Column(
+          children: [
+            Icon(Icons.inventory_2_outlined, color: Colors.grey[600], size: 80),
+            const SizedBox(height: 24),
+            const Text(
+              'No Packages Available',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Check back later for new programs.',
+              style: TextStyle(fontSize: 15, color: Colors.grey[400]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 100, left: 24, right: 24),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red.shade400, size: 64),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load packages',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => controller.loadPackages(),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       ),
     );

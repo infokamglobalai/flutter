@@ -12,10 +12,9 @@ class StudentGradeSubjectChaptersEntryView extends StatelessWidget {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.offNamed(
-        Routes.CHAPTER_SELECTION,
+        Routes.SUBJECT_SELECTION,
         arguments: {
           'preselectGradeId': gradeId,
-          'preselectSubjectId': subjectId,
         },
       );
     });

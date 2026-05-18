@@ -14,6 +14,8 @@ import 'package:najahapp/app/data/services/guest_resource_service.dart';
 import 'package:najahapp/app/data/services/mocktest_service.dart';
 import 'package:najahapp/app/data/services/qna_service.dart';
 
+import 'package:najahapp/app/core/services/connectivity_service.dart';
+
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
@@ -24,6 +26,7 @@ class InitialBinding extends Bindings {
     if (!Get.isRegistered<StorageService>()) {
       Get.put(StorageService(), permanent: true);
     }
+    Get.put(ConnectivityService(), permanent: true);
     Get.put(ApiClient(), permanent: true);
     Get.put(ApiService(), permanent: true);
 

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/data/models/subject_model.dart';
 import 'package:najahapp/app/modules/packages/controllers/package_controller.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
+import 'dart:math' as math;
 
 class SubjectSelectionView extends GetView<PackageController> {
   const SubjectSelectionView({super.key});
@@ -11,124 +14,176 @@ class SubjectSelectionView extends GetView<PackageController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Select Subjects'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (controller.selectedSubjectModels.isNotEmpty) {
-                controller.selectAllChaptersForAllSubjects();
-                Get.toNamed(Routes.CART);
-              }
-            },
-            child: const Text(
-              'Buy',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
+      backgroundColor: const Color(0xFF0F172A), // Premium Dark Deep Navy
+      body: Stack(
         children: [
-          _buildSelectionSummary(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          _buildBackgroundDecoration(),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildAppBar(),
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Choose Your Subjects',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
+                      _buildSelectionSummary(),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Choose Your Subjects',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          _buildSelectAllButton(),
+                        ],
                       ),
-                      _buildSelectAllButton(),
+                      const SizedBox(height: 8),
+                      Obx(() => Text(
+                        '${controller.selectedSubjectModels.length} subjects selected',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      )),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Obx(
-                    () => Text(
-                      '${controller.selectedSubjectModels.length} subjects selected',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSubjectsList(),
-                ],
+                ),
               ),
-            ),
+              _buildSubjectsList(),
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  final package = controller.selectedPackageModel.value;
+                  if (package == null) return const SizedBox.shrink();
+                  
+                  return Column(
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Divider(color: Colors.white10),
+                      ),
+                      _buildPaymentOptions(package),
+                      _buildCouponSection(),
+                      _buildPriceBreakdown(),
+                      const SizedBox(height: 150),
+                    ],
+                  );
+                }),
+              ),
+            ],
           ),
-          _buildBottomBar(),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildBottomBar(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSelectionSummary() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.secondaryColor.withOpacity(0.1),
-          ],
-        ),
-        border: Border(
-          bottom: BorderSide(color: AppTheme.primaryColor.withOpacity(0.2)),
-        ),
-      ),
-      child: Obx(() {
-        // Build selection text based on whether board is selected
-        final gradeText =
-            controller.selectedGradeModel.value?.displayName ?? "Grade";
-        final packageText = controller.selectedPackage.value.toUpperCase();
-        final boardText = controller.selectedBoard.value;
-
-        // For competitive exams, board might be empty
-        final selectionText = boardText.isNotEmpty
-            ? '$gradeText • $boardText • $packageText'
-            : '$gradeText • $packageText';
-
-        return Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.list_alt_rounded,
-                color: Colors.white,
-                size: 24,
+  Widget _buildBackgroundDecoration() {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppTheme.accentColor.withOpacity(0.1),
+                  AppTheme.accentColor.withOpacity(0),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 100,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ColorFilter.mode(Colors.white.withOpacity(0.1), BlendMode.overlay),
+            child: Container(
+              color: Colors.white.withOpacity(0.05),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                onPressed: () => Get.back(),
+              ),
+            ),
+          ),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        title: const Text(
+          'Select Subjects',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+      ),
+    );
+  }
+
+  Widget _buildSelectionSummary() {
+    return Obx(() {
+      final gradeText = controller.selectedGradeModel.value?.displayName ?? "Grade";
+      final packageText = controller.selectedPackage.value.toUpperCase();
+      final boardText = controller.selectedBoard.value;
+      final selectionText = boardText.isNotEmpty ? '$gradeText • $boardText • $packageText' : '$gradeText • $packageText';
+
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: UIUtils.glossyDecoration(
+          baseColor: Colors.white.withOpacity(0.05),
+          borderRadius: 24,
+          showBorder: true,
+        ).copyWith(
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.secondaryColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.list_alt_rounded, color: AppTheme.secondaryColor, size: 24),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Your Selection',
+                  Text(
+                    'CURRENT SELECTION',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.grey[500],
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -136,22 +191,21 @@ class SubjectSelectionView extends GetView<PackageController> {
                     selectionText,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
             ),
           ],
-        );
-      }),
-    );
+        ),
+      );
+    });
   }
 
   Widget _buildSelectAllButton() {
     return Obx(() {
-      // Filter subjects by selected grade
       final filteredSubjects = controller.publicSubjects.where((subject) {
         if (controller.selectedGradeModel.value == null) return true;
         if (subject.grade == null) return true;
@@ -160,362 +214,126 @@ class SubjectSelectionView extends GetView<PackageController> {
 
       if (filteredSubjects.isEmpty) return const SizedBox.shrink();
 
-      final allSelected = filteredSubjects.every(
-        (subject) => controller.isSubjectSelected(subject),
-      );
+      final allSelected = filteredSubjects.every((s) => controller.isSubjectSelected(s.id));
 
-      return OutlinedButton.icon(
+      return TextButton.icon(
         onPressed: () {
+          HapticFeedback.mediumImpact();
           if (allSelected) {
-            // Deselect all
-            for (var subject in filteredSubjects) {
-              if (controller.isSubjectSelected(subject)) {
-                controller.toggleSubject(subject);
-              }
-            }
+            for (var s in filteredSubjects) if (controller.isSubjectSelected(s.id)) controller.toggleSubject(s.id);
           } else {
-            // Select all
-            for (var subject in filteredSubjects) {
-              if (!controller.isSubjectSelected(subject)) {
-                controller.toggleSubject(subject);
-              }
-            }
+            for (var s in filteredSubjects) if (!controller.isSubjectSelected(s.id)) controller.toggleSubject(s.id);
           }
         },
-        icon: Icon(
-          allSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
-          size: 18,
-        ),
-        label: Text(
-          allSelected ? 'Deselect All' : 'Select All',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.primaryColor,
-          side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        icon: Icon(allSelected ? Icons.deselect_rounded : Icons.select_all_rounded, color: AppTheme.primaryColor, size: 18),
+        label: Text(allSelected ? 'None' : 'All', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w900)),
       );
     });
   }
 
   Widget _buildSubjectsList() {
     return Obx(() {
-      // Loading state
       if (controller.isLoadingSubjects.value) {
-        return const Center(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: Colors.white)));
       }
 
-      // Error state
-      if (controller.subjectsError.value.isNotEmpty) {
-        return Center(
-          child: Column(
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load subjects',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                controller.subjectsError.value,
-                style: TextStyle(color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: controller.loadSubjects,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      // Empty state
-      if (controller.publicSubjects.isEmpty) {
-        return Center(
-          child: Column(
-            children: [
-              Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No subjects available',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      // Success state - Display subjects from API filtered by selected grade
       final filteredSubjects = controller.publicSubjects.where((subject) {
-        // If no grade is selected, show all subjects
         if (controller.selectedGradeModel.value == null) return true;
-
-        // If subject has no grade, show it for all grades
         if (subject.grade == null) return true;
-
-        // Otherwise, only show subjects that match the selected grade
         return subject.grade!.id == controller.selectedGradeModel.value!.id;
       }).toList();
 
-      // Show empty state if no subjects match the grade
       if (filteredSubjects.isEmpty) {
-        return Center(
-          child: Column(
-            children: [
-              Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No subjects available',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No subjects found for ${controller.selectedGradeModel.value?.displayName ?? "this grade"}',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        );
+        return SliverFillRemaining(child: _buildEmptyState());
       }
 
-      return Column(
-        children: filteredSubjects
-            .map((subject) => _buildSubjectCard(subject: subject))
-            .toList(),
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildSubjectCard(filteredSubjects[index]),
+            childCount: filteredSubjects.length,
+          ),
+        ),
       );
     });
   }
 
-  Widget _buildSubjectCard({required SubjectModel subject}) {
-    // Get icon based on subject name
-    IconData icon;
-    final nameLower = subject.name.toLowerCase();
-    if (nameLower.contains('math')) {
-      icon = Icons.calculate_rounded;
-    } else if (nameLower.contains('physics')) {
-      icon = Icons.science_rounded;
-    } else if (nameLower.contains('chemistry')) {
-      icon = Icons.science_rounded;
-    } else if (nameLower.contains('biology')) {
-      icon = Icons.biotech_rounded;
-    } else if (nameLower.contains('english')) {
-      icon = Icons.menu_book_rounded;
-    } else if (nameLower.contains('social')) {
-      icon = Icons.public_rounded;
-    } else if (nameLower.contains('computer')) {
-      icon = Icons.computer_rounded;
-    } else if (nameLower.contains('hindi')) {
-      icon = Icons.translate_rounded;
-    } else if (nameLower.contains('sanskrit')) {
-      icon = Icons.auto_stories_rounded;
-    } else if (nameLower.contains('environment')) {
-      icon = Icons.eco_rounded;
-    } else if (nameLower.contains('science')) {
-      icon = Icons.science_rounded;
-    } else {
-      icon = Icons.book_rounded;
-    }
-
-    // Get color based on subject name
-    Color color;
-    if (nameLower.contains('math')) {
-      color = const Color(0xFF3B82F6); // Blue
-    } else if (nameLower.contains('physics')) {
-      color = const Color(0xFF10B981); // Green
-    } else if (nameLower.contains('chemistry')) {
-      color = const Color(0xFFF59E0B); // Amber
-    } else if (nameLower.contains('biology')) {
-      color = const Color(0xFF84CC16); // Lime
-    } else if (nameLower.contains('english')) {
-      color = const Color(0xFFEF4444); // Red
-    } else if (nameLower.contains('social')) {
-      color = const Color(0xFFF59E0B); // Amber
-    } else if (nameLower.contains('computer')) {
-      color = const Color(0xFF8B5CF6); // Purple
-    } else if (nameLower.contains('hindi')) {
-      color = const Color(0xFFEC4899); // Pink
-    } else if (nameLower.contains('sanskrit')) {
-      color = const Color(0xFF06B6D4); // Cyan
-    } else if (nameLower.contains('environment')) {
-      color = const Color(0xFF84CC16); // Lime
-    } else if (nameLower.contains('science')) {
-      color = const Color(0xFF10B981); // Green
-    } else {
-      color = const Color(0xFF6B7280); // Gray
-    }
-
+  Widget _buildSubjectCard(SubjectModel subject) {
     return Obx(() {
-      final isSelected = controller.isSubjectSelected(subject);
+      final isSelected = controller.isSubjectSelected(subject.id);
+      final color = _getSubjectColor(subject.name);
 
-      return InkWell(
-        onTap: () => controller.toggleSubject(subject),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isSelected
-                  ? [color, color.withOpacity(0.85)]
-                  : [Colors.grey.shade100, Colors.grey.shade200],
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: InkWell(
+          onTap: () {
+            if (controller.selectedPackageModel.value?.pricingType == 'package') {
+              Get.snackbar(
+                'Package Info',
+                'All subjects are included in this package',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.9),
+                colorText: Colors.white,
+              );
+              return;
+            }
+            HapticFeedback.lightImpact();
+            controller.toggleSubject(subject.id);
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: UIUtils.glossyDecoration(
+              baseColor: isSelected ? color : Colors.white.withOpacity(0.05),
+              borderRadius: 24,
+              showBorder: true,
+            ).copyWith(
+              border: Border.all(
+                color: isSelected ? color.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+                width: 1.5,
+              ),
             ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: isSelected
-                    ? color.withOpacity(0.4)
-                    : Colors.black.withOpacity(0.1),
-                blurRadius: isSelected ? 20 : 10,
-                offset: Offset(0, isSelected ? 10 : 4),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Decorative circles (only when selected)
-              if (isSelected) ...[
-                Positioned(
-                  top: -20,
-                  right: -20,
-                  child: Container(
-                    width: 80,
-                    height: 80,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
+                      color: isSelected ? Colors.white.withOpacity(0.2) : color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(_getSubjectIcon(subject.name), color: isSelected ? Colors.white : color, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subject.displayName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: isSelected ? Colors.white : Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Comprehensive Module',
+                          style: TextStyle(fontSize: 12, color: isSelected ? Colors.white.withOpacity(0.8) : Colors.grey[500]),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: -15,
-                  left: -15,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black.withOpacity(0.1),
-                    ),
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+                    color: isSelected ? Colors.white : Colors.grey[600],
+                    size: 24,
                   ),
-                ),
-              ],
-
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Icon badge with glass-morphism
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white.withOpacity(0.25)
-                            : color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? Colors.white.withOpacity(0.4)
-                              : color.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: isSelected ? Colors.white : color,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Subject details
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            subject.displayName,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF1F2937),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Comprehensive curriculum',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isSelected
-                                  ? Colors.white.withOpacity(0.9)
-                                  : Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Checkbox
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected
-                              ? Colors.white
-                              : color.withOpacity(0.3),
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        isSelected ? Icons.check_rounded : Icons.add_rounded,
-                        color: isSelected ? color : Colors.grey[400],
-                        size: 24,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );
@@ -525,80 +343,411 @@ class SubjectSelectionView extends GetView<PackageController> {
   Widget _buildBottomBar() {
     return Obx(() {
       final selectedCount = controller.selectedSubjectModels.length;
+      final package = controller.selectedPackageModel.value;
+      final isPackageWise = package?.pricingType == 'package';
+      final canCheckout = isPackageWise || selectedCount >= (package?.minSubjectSelection ?? 1);
 
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F172A).withOpacity(0),
+              const Color(0xFF0F172A).withOpacity(0.95),
+              const Color(0xFF0F172A),
+            ],
+            stops: const [0, 0.4, 1],
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'TOTAL PAYABLE',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.grey),
+                  ),
+                  Text(
+                    '${controller.isIndia.value ? '₹' : '\$'}${controller.getFinalPayableAmount().toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              flex: 2,
+              child: GestureDetector(
+                onTap: canCheckout ? () {
+                  HapticFeedback.heavyImpact();
+                  controller.initiateCheckout();
+                } : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: UIUtils.glossyDecoration(
+                    baseColor: canCheckout ? AppTheme.primaryColor : Colors.grey[800]!,
+                    borderRadius: 20,
+                  ).copyWith(
+                    boxShadow: canCheckout 
+                      ? [BoxShadow(color: AppTheme.primaryColor.withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 8))] 
+                      : null,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'COMPLETE PURCHASE',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.2),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
-        child: SafeArea(
-          child: Row(
+      );
+    });
+  }
+
+  Widget _buildPaymentOptions(dynamic package) {
+    final installments = package.installments;
+    if (installments == null || !installments.enabled) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Payment Strategy',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
+          const SizedBox(height: 20),
+          Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$selectedCount Subject${selectedCount != 1 ? 's' : ''} Selected',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Confirm & Buy Now',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
+                child: _buildPaymentCard(
+                  'Full Unlock',
+                  'Instant access',
+                  'full',
+                  Icons.auto_awesome_rounded,
                 ),
               ),
-              ElevatedButton(
-                onPressed: selectedCount > 0
-                    ? () {
-                        controller.selectAllChaptersForAllSubjects();
-                        Get.toNamed(Routes.CART);
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  children: [
-                    Text(
-                      'Continue',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 20),
-                  ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPaymentCard(
+                  'Installments',
+                  'Flexible plan',
+                  'installment',
+                  Icons.account_balance_wallet_rounded,
+                  showInstallmentBreakdown: true,
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentCard(String title, String subtitle, String mode, IconData icon, {bool showInstallmentBreakdown = false}) {
+    return Obx(() {
+      final isSelected = controller.paymentMode.value == mode;
+      final baseColor = isSelected ? AppTheme.primaryColor : Colors.white.withOpacity(0.05);
+      
+      return InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          controller.togglePaymentMode(mode);
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(20),
+          decoration: UIUtils.glossyDecoration(
+            baseColor: baseColor,
+            borderRadius: 20,
+            showBorder: true,
+          ).copyWith(
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: isSelected ? Colors.white : AppTheme.primaryColor, size: 28),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.9),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: isSelected ? Colors.white.withOpacity(0.7) : Colors.grey[500]),
+              ),
+              if (showInstallmentBreakdown && isSelected) ...[
+                const SizedBox(height: 12),
+                _buildInstallmentBreakdown(controller.selectedPackageModel.value!),
+              ],
             ],
           ),
         ),
       );
     });
+  }
+
+  Widget _buildInstallmentBreakdown(dynamic package) {
+    final symbol = controller.isIndia.value ? '₹' : '\$';
+    final bookingAmt = package.installments.bookingAmount;
+    final total = controller.getTotalPrice();
+    final remaining = math.max(0.0, total - bookingAmt);
+    final count = package.installments.count;
+    final perInstallment = count > 0 ? (remaining / count) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: Colors.white24, height: 16),
+        Text(
+          'Next: $count × $symbol${perInstallment.toStringAsFixed(0)}',
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCouponSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Promo Code',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
+          const SizedBox(height: 20),
+          Obx(() {
+            final isInstallment = controller.paymentMode.value == 'installment';
+            return Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(isInstallment ? 0.02 : 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: TextField(
+                      enabled: !isInstallment && controller.couponDiscount.value <= 0,
+                      onChanged: (v) => controller.couponCode.value = v,
+                      style: TextStyle(
+                        color: isInstallment ? Colors.white30 : Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: isInstallment ? 'NOT AVAILABLE' : 'Enter Coupon',
+                        hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: (isInstallment || controller.isApplyingCoupon.value) 
+                      ? null 
+                      : () => controller.applyCoupon(),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: UIUtils.glossyDecoration(
+                      baseColor: (isInstallment || controller.isApplyingCoupon.value) 
+                          ? Colors.grey[800]! 
+                          : AppTheme.primaryColor,
+                      borderRadius: 16,
+                    ),
+                    child: controller.isApplyingCoupon.value
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            'Apply', 
+                            style: TextStyle(
+                              color: isInstallment ? Colors.white24 : Colors.white, 
+                              fontWeight: FontWeight.w900, 
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            );
+          }),
+          Obx(() {
+            if (controller.paymentMode.value == 'installment') {
+              return const Padding(
+                padding: EdgeInsets.only(top: 12, left: 4),
+                child: Text(
+                  '* Coupons are only available for one-time payments.',
+                  style: TextStyle(fontSize: 11, color: Colors.amberAccent, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
+                ),
+              );
+            }
+            if (controller.couponMessage.value.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 12, left: 4),
+              child: Text(
+                controller.couponMessage.value,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: controller.couponDiscount.value > 0 ? Colors.greenAccent : Colors.redAccent,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceBreakdown() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: UIUtils.glossyDecoration(
+          baseColor: Colors.white.withOpacity(0.03),
+          borderRadius: 24,
+          showBorder: true,
+        ),
+        child: Column(
+          children: [
+            _buildPriceRow('Subtotal', controller.calculateSubtotal()),
+            if (controller.couponDiscount.value > 0)
+              _buildPriceRow('Savings', -controller.couponDiscount.value, color: Colors.greenAccent),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(color: Colors.white10)),
+            _buildPriceRow(
+              controller.paymentMode.value == 'installment' ? 'Due Today' : 'Total Payable',
+              controller.getFinalPayableAmount(),
+              isBold: true,
+              fontSize: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, double amount, {bool isBold = false, double fontSize = 14, Color? color}) {
+    final symbol = controller.isIndia.value ? '₹' : '\$';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.w900 : FontWeight.w600, color: isBold ? Colors.white : Colors.grey[500])),
+        Text('${amount < 0 ? '-' : ''}$symbol${amount.abs().toStringAsFixed(2)}', style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.w900 : FontWeight.w700, color: color ?? Colors.white)),
+      ],
+    );
+  }
+
+  Color _getSubjectColor(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('math')) return Colors.blue;
+    if (n.contains('physics')) return Colors.teal;
+    if (n.contains('chemistry')) return Colors.orange;
+    if (n.contains('biology')) return Colors.green;
+    return AppTheme.primaryColor;
+  }
+
+  IconData _getSubjectIcon(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('math')) return Icons.calculate_rounded;
+    if (n.contains('physics')) return Icons.science_rounded;
+    if (n.contains('chemistry')) return Icons.biotech_rounded;
+    if (n.contains('biology')) return Icons.eco_rounded;
+    return Icons.book_rounded;
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_rounded, size: 64, color: Colors.grey[700]),
+          const SizedBox(height: 16),
+          const Text('No subjects available', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.15),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

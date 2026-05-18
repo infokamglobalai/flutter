@@ -54,8 +54,12 @@ android {
 
     buildTypes {
         release {
-            // Release signing for Play Store publishing
-            signingConfig = signingConfigs.getByName("release")
+            // Use release signing if available, otherwise fallback to debug signing
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

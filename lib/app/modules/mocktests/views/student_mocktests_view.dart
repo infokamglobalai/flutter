@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/mocktests/controllers/student_mocktests_controller.dart';
 
@@ -9,7 +11,7 @@ class StudentMocktestsView extends GetView<StudentMocktestsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Mock tests'),
         backgroundColor: AppTheme.primaryColor,
@@ -86,19 +88,33 @@ class StudentMocktestsView extends GetView<StudentMocktestsController> {
             padding: const EdgeInsets.all(16),
             children: [
               if (sub != null) ...[
-                Text(
-                  sub.package.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: UIUtils.glassDecoration(borderRadius: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sub.package.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${sub.grade.name} · ${sub.board.name}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${sub.grade.name} · ${sub.board.name}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
               ],
               ...list.map((t) => _TestCard(test: t, onOpen: controller.openAttempt)),
             ],
@@ -125,16 +141,27 @@ class _TestCard extends StatelessWidget {
     final score = test['score'];
     final pct = test['percentage'];
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.grey[200]!),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: UIUtils.glossyDecoration(
+        baseColor: Colors.white,
+        borderRadius: 20,
+        showBorder: true,
+      ).copyWith(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: InkWell(
-        onTap: () => onOpen(test),
-        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onOpen(test);
+        },
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -144,7 +171,8 @@ class _TestCard extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF1E293B),
                 ),
               ),
               const SizedBox(height: 8),
@@ -174,7 +202,13 @@ class _TestCard extends StatelessWidget {
                 attempted && status == 'completed'
                     ? 'Tap to view results'
                     : 'Tap to start',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: (attempted && status == 'completed')
+                      ? AppTheme.successColor
+                      : AppTheme.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),

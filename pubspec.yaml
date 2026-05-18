@@ -41,6 +41,7 @@ dependencies:
   # Network & API
   http: ^1.2.0
   dio: ^5.4.0
+  dio_smart_retry: ^7.0.1
   connectivity_plus: ^5.0.2
   
   # Local Storage

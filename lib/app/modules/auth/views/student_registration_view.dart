@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:najahapp/app/core/utils/ui_utils.dart';
 import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
 import 'package:najahapp/app/data/repositories/data_repository.dart';
+import 'dart:math' as math;
 
 class StudentRegistrationView extends StatefulWidget {
   const StudentRegistrationView({super.key});
@@ -603,38 +606,55 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+      body: Stack(
+        children: [
+          Container(
+            decoration: UIUtils.meshGradientDecoration(
+              colors: [
+                AppTheme.primaryColor,
+                const Color(0xFF1E293B),
+                const Color(0xFF0F172A),
+                AppTheme.primaryColor.withValues(alpha: 0.8),
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Get.back(),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Student Registration',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+          const Positioned(
+            top: -100,
+            right: -50,
+            child: _AnimatedGlowBlob(color: Colors.white, size: 300),
+          ),
+          const Positioned(
+            bottom: 100,
+            left: -80,
+            child: _AnimatedGlowBlob(color: Colors.cyanAccent, size: 350),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 20, 16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Get.back();
+                        },
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               // Form
               Expanded(
@@ -658,17 +678,24 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SizedBox(height: 20),
+                            const Text(
+                              'STUDENT REGISTRATION',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF64748B),
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
 
                             // Full Name
                             TextFormField(
                               controller: _fullNameController,
-                              decoration: InputDecoration(
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              decoration: UIUtils.glassInputDecoration(
                                 labelText: 'Full Name',
-                                prefixIcon: const Icon(Icons.person_outline),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                prefixIcon: Icons.person_outline_rounded,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -683,12 +710,10 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: const Icon(Icons.email_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              decoration: UIUtils.glassInputDecoration(
+                                labelText: 'Email Address',
+                                prefixIcon: Icons.email_outlined,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -707,20 +732,20 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                               () => TextFormField(
                                 controller: _passwordController,
                                 obscureText: _obscurePassword.value,
-                                decoration: InputDecoration(
+                                decoration: UIUtils.glassInputDecoration(
                                   labelText: 'Password',
-                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                ).copyWith(
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword.value
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
+                                          ? Icons.visibility_rounded
+                                          : Icons.visibility_off_rounded,
+                                      size: 20,
+                                      color: const Color(0xFF64748B),
                                     ),
                                     onPressed: () => _obscurePassword.value =
                                         !_obscurePassword.value,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                                 validator: (value) {
@@ -741,12 +766,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
-                              decoration: InputDecoration(
+                              decoration: UIUtils.glassInputDecoration(
                                 labelText: 'Phone Number',
-                                prefixIcon: const Icon(Icons.phone_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                prefixIcon: Icons.phone_outlined,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -763,14 +785,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                             // School Name
                             TextFormField(
                               controller: _schoolNameController,
-                              decoration: InputDecoration(
+                              decoration: UIUtils.glassInputDecoration(
                                 labelText: 'School Name',
-                                prefixIcon: const Icon(
-                                  Icons.account_balance_outlined,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                prefixIcon: Icons.account_balance_outlined,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -783,12 +800,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
 
                             // Board Dropdown
                             DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
+                              decoration: UIUtils.glassInputDecoration(
                                 labelText: 'Board',
-                                prefixIcon: const Icon(Icons.school_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                prefixIcon: Icons.school_outlined,
                               ),
                               value: _selectedBoard,
                               items: _boards
@@ -813,12 +827,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
 
                             // Grade Dropdown
                             DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
+                              decoration: UIUtils.glassInputDecoration(
                                 labelText: 'Grade',
-                                prefixIcon: const Icon(Icons.class_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                prefixIcon: Icons.grade_outlined,
                               ),
                               value: _selectedGrade,
                               items: _grades
@@ -830,6 +841,7 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                                   )
                                   .toList(),
                               onChanged: (value) {
+                                HapticFeedback.selectionClick();
                                 setState(() => _selectedGrade = value);
                               },
                               validator: (value) {
@@ -845,14 +857,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 isExpanded: true,
-                                decoration: InputDecoration(
+                                decoration: UIUtils.glassInputDecoration(
                                   labelText: 'State',
-                                  prefixIcon: const Icon(
-                                    Icons.location_city_outlined,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  prefixIcon: Icons.location_on_outlined,
                                 ),
                                 hint: _isLoadingStates.value
                                     ? const Text('Loading...')
@@ -875,6 +882,7 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                                     _isLoadingStates.value || _states.isEmpty
                                     ? null
                                     : (value) {
+                                        HapticFeedback.selectionClick();
                                         setState(() {
                                           _selectedState = value;
                                           _selectedCity = null;
@@ -897,12 +905,9 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 isExpanded: true,
-                                decoration: InputDecoration(
+                                decoration: UIUtils.glassInputDecoration(
                                   labelText: 'City',
-                                  prefixIcon: const Icon(Icons.place_outlined),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  prefixIcon: Icons.location_city_outlined,
                                 ),
                                 hint: _isLoadingCities.value
                                     ? const Text('Loading...')
@@ -929,6 +934,7 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
                                         _cities.isEmpty
                                     ? null
                                     : (value) {
+                                        HapticFeedback.selectionClick();
                                         setState(() => _selectedCity = value);
                                       },
                                 validator: (value) {
@@ -943,41 +949,48 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
 
                             // Register Button
                             Obx(
-                              () => SizedBox(
-                                height: 56,
+                              () => Container(
+                                decoration: UIUtils.glossyDecoration(
+                                  baseColor: AppTheme.primaryColor,
+                                  borderRadius: 16,
+                                ),
                                 child: ElevatedButton(
                                   onPressed: _authController.isLoading.value
                                       ? null
-                                      : _handleRegister,
+                                      : () {
+                                          HapticFeedback.mediumImpact();
+                                          _handleRegister();
+                                        },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    elevation: 2,
                                   ),
                                   child: _authController.isLoading.value
                                       ? const SizedBox(
-                                          height: 24,
-                                          width: 24,
+                                          height: 20,
+                                          width: 20,
                                           child: CircularProgressIndicator(
-                                            color: Colors.white,
                                             strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                           ),
                                         )
                                       : const Text(
-                                          'Register',
+                                          'Create My Account',
                                           style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                            color: Colors.white,
                                           ),
                                         ),
                                 ),
                               ),
                             ),
                             const SizedBox(height: 20),
-
                             // Already have account
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -1005,7 +1018,62 @@ class _StudentRegistrationViewState extends State<StudentRegistrationView> {
             ],
           ),
         ),
-      ),
+      ],
+    ),
+  );
+}
+}
+
+class _AnimatedGlowBlob extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const _AnimatedGlowBlob({required this.color, required this.size});
+
+  @override
+  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
+}
+
+class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * math.pi,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  widget.color.withOpacity(0.12),
+                  widget.color.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
