@@ -1,3 +1,5 @@
+import 'package:najahapp/app/core/constants/api_constants.dart';
+
 class SubscriptionModel {
   final String id;
   final String student;
@@ -213,10 +215,23 @@ class PackageInfo {
     final img = (image ?? '').toString().trim();
     if (img.isEmpty) return '';
     if (img.startsWith('http://') || img.startsWith('https://')) return img;
-    if (img.startsWith('/uploads/')) return 'https://lms.eduaitutors.com$img';
-    if (img.startsWith('uploads/')) return 'https://lms.eduaitutors.com/$img';
-    if (img.startsWith('/')) return 'https://lms.eduaitutors.com$img';
-    return 'https://lms.eduaitutors.com/uploads/$img';
+    if (img.startsWith('//')) return 'https:$img';
+
+    String baseHost = 'https://kam.eduaitutors.online';
+    final apiUri = Uri.tryParse(ApiConstants.baseUrl);
+    if (apiUri != null && apiUri.host.isNotEmpty) {
+      baseHost = '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ":${apiUri.port}" : ""}';
+    }
+
+    final path = img.startsWith('/uploads/')
+        ? img
+        : img.startsWith('uploads/')
+            ? '/$img'
+            : img.startsWith('/')
+                ? '/uploads$img'
+                : '/uploads/$img';
+
+    return Uri.encodeFull('$baseHost$path');
   }
 }
 

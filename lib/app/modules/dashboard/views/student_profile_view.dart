@@ -6,6 +6,7 @@ import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:image_picker/image_picker.dart';
 
 class StudentProfileView extends GetView<DashboardController> {
@@ -68,9 +69,14 @@ class StudentProfileView extends GetView<DashboardController> {
       final v = (raw ?? '').toString().trim();
       if (v.isEmpty) return '';
       if (v.startsWith('http://') || v.startsWith('https://')) return v;
-      if (v.startsWith('/uploads/')) return 'https://lms.eduaitutors.com$v';
-      if (v.startsWith('uploads/')) return 'https://lms.eduaitutors.com/$v';
-      return 'https://lms.eduaitutors.com/uploads/$v';
+      if (v.startsWith('//')) return 'https:$v';
+      String baseHost = 'https://kam.eduaitutors.online';
+      final apiUri = Uri.tryParse(ApiConstants.baseUrl);
+      if (apiUri != null && apiUri.host.isNotEmpty) {
+        baseHost = '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ":${apiUri.port}" : ""}';
+      }
+      final path = v.startsWith('/uploads/') ? v : v.startsWith('uploads/') ? '/$v' : '/uploads/$v';
+      return Uri.encodeFull('$baseHost$path');
     }
 
     final avatarUrl = resolveAvatarUrl(user?.avatar?.toString());
@@ -309,16 +315,15 @@ class StudentProfileView extends GetView<DashboardController> {
                     String resolveAvatarUrl(String? raw) {
                       final v = (raw ?? '').toString().trim();
                       if (v.isEmpty) return '';
-                      if (v.startsWith('http://') || v.startsWith('https://')) {
-                        return v;
+                      if (v.startsWith('http://') || v.startsWith('https://')) return v;
+                      if (v.startsWith('//')) return 'https:$v';
+                      String baseHost = 'https://kam.eduaitutors.online';
+                      final apiUri = Uri.tryParse(ApiConstants.baseUrl);
+                      if (apiUri != null && apiUri.host.isNotEmpty) {
+                        baseHost = '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ":${apiUri.port}" : ""}';
                       }
-                      if (v.startsWith('/uploads/')) {
-                        return 'https://lms.eduaitutors.com$v';
-                      }
-                      if (v.startsWith('uploads/')) {
-                        return 'https://lms.eduaitutors.com/$v';
-                      }
-                      return 'https://lms.eduaitutors.com/uploads/$v';
+                      final path = v.startsWith('/uploads/') ? v : v.startsWith('uploads/') ? '/$v' : '/uploads/$v';
+                      return Uri.encodeFull('$baseHost$path');
                     }
 
                     final currentAvatarUrl = picked != null

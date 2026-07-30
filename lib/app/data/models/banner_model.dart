@@ -1,3 +1,5 @@
+import 'package:najahapp/app/core/constants/api_constants.dart';
+
 class BannerModel {
   final String id;
   final String title;
@@ -48,9 +50,23 @@ class BannerModel {
     final raw = image.trim();
     if (raw.isEmpty) return '';
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    if (raw.startsWith('/uploads/')) return 'https://lms.eduaitutors.com$raw';
-    if (raw.startsWith('/')) return 'https://lms.eduaitutors.com/uploads$raw';
-    return 'https://lms.eduaitutors.com/uploads/$raw';
+    if (raw.startsWith('//')) return 'https:$raw';
+
+    String baseHost = 'https://kam.eduaitutors.online';
+    final apiUri = Uri.tryParse(ApiConstants.baseUrl);
+    if (apiUri != null && apiUri.host.isNotEmpty) {
+      baseHost = '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ":${apiUri.port}" : ""}';
+    }
+
+    final path = raw.startsWith('/uploads/')
+        ? raw
+        : raw.startsWith('uploads/')
+            ? '/$raw'
+            : raw.startsWith('/')
+                ? '/uploads$raw'
+                : '/uploads/$raw';
+
+    return Uri.encodeFull('$baseHost$path');
   }
 }
 

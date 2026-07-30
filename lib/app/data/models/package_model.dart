@@ -1,6 +1,7 @@
 import 'package:najahapp/app/data/models/subject_model.dart';
 import 'package:najahapp/app/data/models/grade_model.dart';
 import 'package:najahapp/app/data/models/board_model.dart';
+import 'package:najahapp/app/core/constants/api_constants.dart';
 
 class PackageModel {
   final String id;
@@ -154,9 +155,26 @@ class PackageModel {
   }
 
   String get imageUrl {
-    if (image == null || image!.isEmpty) return '';
-    if (image!.startsWith('http')) return image!;
-    return 'https://lms.eduaitutors.com$image';
+    final img = (image ?? '').trim();
+    if (img.isEmpty) return '';
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+    if (img.startsWith('//')) return 'https:$img';
+
+    String baseHost = 'https://kam.eduaitutors.online';
+    final apiUri = Uri.tryParse(ApiConstants.baseUrl);
+    if (apiUri != null && apiUri.host.isNotEmpty) {
+      baseHost = '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ":${apiUri.port}" : ""}';
+    }
+
+    final path = img.startsWith('/uploads/')
+        ? img
+        : img.startsWith('uploads/')
+            ? '/$img'
+            : img.startsWith('/')
+                ? '/uploads$img'
+                : '/uploads/$img';
+
+    return Uri.encodeFull('$baseHost$path');
   }
 }
 
