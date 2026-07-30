@@ -23,8 +23,14 @@ class AuthController extends GetxController {
 
   Future<void> _loadUserFromStorage() async {
     final userData = _storageService.getUserData();
+    final token = _storageService.getTokenSync();
     if (userData != null) {
       currentUser.value = UserModel.fromJson(userData);
+    }
+    if (token != null && token.isNotEmpty) {
+      try {
+        Get.find<ApiService>().updateCachedToken(token);
+      } catch (_) {}
     }
   }
 

@@ -15,6 +15,7 @@ import 'package:najahapp/app/data/services/mocktest_service.dart';
 import 'package:najahapp/app/data/services/qna_service.dart';
 
 import 'package:najahapp/app/core/services/connectivity_service.dart';
+import 'package:najahapp/app/modules/auth/controllers/auth_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -29,6 +30,7 @@ class InitialBinding extends Bindings {
     Get.put(ConnectivityService(), permanent: true);
     Get.put(ApiClient(), permanent: true);
     Get.put(ApiService(), permanent: true);
+    Get.put(AuthController(), permanent: true);
 
     // Singleton DataService – shares the ApiService connection pool
     Get.put(DataService(), permanent: true);

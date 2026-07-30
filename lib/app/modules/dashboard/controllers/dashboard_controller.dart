@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/data/models/user_model.dart';
 import 'package:najahapp/app/data/models/subscription_model.dart';
 import 'package:najahapp/app/data/models/student_profile_model.dart';
+import 'package:najahapp/app/core/services/storage_service.dart';
 import 'package:najahapp/app/data/models/package_model.dart';
 import 'package:najahapp/app/data/repositories/subscription_repository.dart';
 import 'package:najahapp/app/data/repositories/auth_repository.dart';
@@ -21,6 +22,7 @@ class DashboardController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final PackageService _packageService = PackageService();
   final DataService _dataService = DataService();
+  final StorageService _storageService = Get.find<StorageService>();
   final NotificationService _notificationService = NotificationService();
 
   // Make FCMService optional — may not be registered if Firebase is not yet initialised
@@ -189,9 +191,21 @@ class DashboardController extends GetxController {
       // Always try to load public banners (works for guest + logged-in)
       await loadPublicBanners();
 
-      // Check if guest mode
-      if (_authController == null ||
-          _authController!.currentUser.value == null) {
+      // Check if logged-in user or stored token
+      UserModel? resolvedUser = _authController?.currentUser.value;
+      if (resolvedUser == null) {
+        final userData = _storageService.getUserData();
+        if (userData != null) {
+          try {
+            resolvedUser = UserModel.fromJson(userData);
+            if (_authController != null) {
+              _authController!.currentUser.value = resolvedUser;
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (resolvedUser == null) {
         isGuestMode.value = true;
         user.value = null;
         // Set default guest stats
@@ -203,7 +217,7 @@ class DashboardController extends GetxController {
       } else {
         isGuestMode.value = false;
         // Load user profile
-        user.value = _authController!.currentUser.value;
+        user.value = resolvedUser;
 
         // Load student profile if user is a student
         if (user.value?.role.toLowerCase() == 'student') {
