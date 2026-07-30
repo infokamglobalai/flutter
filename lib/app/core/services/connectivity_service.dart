@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 
 class ConnectivityService extends GetxService {
   final Connectivity _connectivity = Connectivity();
-  late StreamSubscription<ConnectivityResult> _subscription;
+  StreamSubscription<dynamic>? _subscription;
   
   final isConnected = true.obs;
 
@@ -13,7 +13,13 @@ class ConnectivityService extends GetxService {
   void onInit() {
     super.onInit();
     _checkInitialConnectivity();
-    _subscription = _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+    try {
+      _subscription = _connectivity.onConnectivityChanged.listen((dynamic result) {
+        _updateConnectionStatus(result);
+      });
+    } catch (e) {
+      debugPrint('Connectivity listen Error: $e');
+    }
   }
 
   Future<void> _checkInitialConnectivity() async {
@@ -25,15 +31,21 @@ class ConnectivityService extends GetxService {
     }
   }
 
-  void _updateConnectionStatus(ConnectivityResult result) {
-    // If result is not 'none', we are connected
-    final hasConnection = result != ConnectivityResult.none;
+  void _updateConnectionStatus(dynamic result) {
+    bool hasConnection;
+    try {
+      if (result is List) {
+        hasConnection = result.any((r) => r != ConnectivityResult.none);
+      } else {
+        hasConnection = result != ConnectivityResult.none;
+      }
+    } catch (_) {
+      hasConnection = true; // default to connected on error
+    }
     
     if (isConnected.value && !hasConnection) {
-      // Just went offline
       _showNoInternetSnackbar();
     } else if (!isConnected.value && hasConnection) {
-      // Just came back online
       _showBackOnlineSnackbar();
     }
     
@@ -72,7 +84,7 @@ class ConnectivityService extends GetxService {
 
   @override
   void onClose() {
-    _subscription.cancel();
+    _subscription?.cancel();
     super.onClose();
   }
 }
