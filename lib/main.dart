@@ -25,13 +25,15 @@ void main() {
       return true; // prevent hard crash on some platforms
     };
 
-    // Initialize Firebase
-    // Web build in this repo is not configured with FlutterFire options.
-    // Skip Firebase init on web so the app can run in Chrome for UI testing.
+    // Initialize Firebase (safely wrapped in try-catch)
     if (!kIsWeb) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } catch (e) {
+        debugPrint('Firebase initialization error: $e');
+      }
     }
 
     // Initialize Storage Service

@@ -79,7 +79,7 @@ class AppTheme {
       fontFamily: GoogleFonts.lato().fontFamily,
       textTheme: textTheme,
       visualDensity: VisualDensity.standard,
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: InkRipple.splashFactory,
       iconTheme: IconThemeData(color: cs.onSurfaceVariant),
 
       appBarTheme: AppBarTheme(
@@ -297,7 +297,7 @@ class AppTheme {
       fontFamily: GoogleFonts.lato().fontFamily,
       textTheme: textTheme,
       visualDensity: VisualDensity.standard,
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: InkRipple.splashFactory,
       iconTheme: IconThemeData(color: cs.onSurfaceVariant),
 
       appBarTheme: AppBarTheme(

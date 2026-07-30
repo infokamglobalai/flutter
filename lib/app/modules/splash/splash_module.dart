@@ -40,69 +40,51 @@ class _SplashViewState extends State<SplashView>
   }
 
   Future<void> _navigate() async {
-    // Wait for splash animation + ensure all bindings are initialized
-    await Future.delayed(const Duration(seconds: 3));
+    // 1.5 seconds splash display
+    await Future.delayed(const Duration(milliseconds: 1500));
 
-    // Wait until the navigator context is ready
-    int retries = 0;
-    while (Get.context == null && retries < 10) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      retries++;
-    }
-
-    // If widget was disposed before navigation (unlikely but safe), bail out
     if (!mounted) return;
 
-    try {
-      StorageService storageService;
-      try {
-        storageService = Get.find<StorageService>();
-      } catch (_) {
-        // If StorageService not yet registered, go to login
-        Get.offAllNamed(Routes.LOGIN);
-        return;
-      }
+    String targetRoute = Routes.LOGIN;
 
-      // Check if onboarding is completed
-      bool onboardingCompleted = false;
-      try {
-        onboardingCompleted = storageService.isOnboardingCompleted();
-      } catch (_) {
-        onboardingCompleted = false;
-      }
+    try {
+      final storageService = Get.find<StorageService>();
+      final onboardingCompleted = storageService.isOnboardingCompleted();
 
       if (!onboardingCompleted) {
-        Get.offAllNamed(Routes.ONBOARDING);
-        return;
-      }
-
-      // Check if user is logged in
-      final token = storageService.getString(AppConstants.storageKeyToken);
-
-      if (token != null && token.isNotEmpty) {
-        final userData = storageService.getUserData();
-        final userRole = userData?['role'] as String?;
-
-        if (userRole != null) {
-          final role = userRole.toLowerCase();
-          if (role == 'parent') {
-            Get.offAllNamed(Routes.PARENT_DASHBOARD);
-            return;
-          }
-          if (role == 'student') {
-            Get.offAllNamed(Routes.DASHBOARD);
-            return;
-          }
-        }
-        // Unknown role or no role, go to dashboard as student
-        Get.offAllNamed(Routes.DASHBOARD);
+        targetRoute = Routes.ONBOARDING;
       } else {
-        Get.offAllNamed(Routes.LOGIN);
+        final token = storageService.getString(AppConstants.storageKeyToken);
+        if (token != null && token.isNotEmpty) {
+          final userData = storageService.getUserData();
+          final userRole = userData?['role']?.toString().toLowerCase();
+
+          if (userRole == 'parent') {
+            targetRoute = Routes.PARENT_DASHBOARD;
+          } else {
+            targetRoute = Routes.DASHBOARD;
+          }
+        } else {
+          targetRoute = Routes.LOGIN;
+        }
       }
     } catch (e) {
-      // Ultimate fallback — always navigate away from splash
-      if (mounted) {
-        Get.offAllNamed(Routes.LOGIN);
+      debugPrint('Splash navigation error: $e');
+      targetRoute = Routes.LOGIN;
+    }
+
+    if (!mounted) return;
+
+    // Perform navigation with multiple fallbacks
+    try {
+      Get.offAllNamed(targetRoute);
+    } catch (e) {
+      debugPrint('Get.offAllNamed failed: $e');
+      try {
+        Navigator.of(context).pushReplacementNamed(targetRoute);
+      } catch (e2) {
+        debugPrint('Navigator fallback failed: $e2');
+        Get.toNamed(targetRoute);
       }
     }
   }
