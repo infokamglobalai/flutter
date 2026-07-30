@@ -242,15 +242,29 @@ class MySubscriptionsView extends GetView<MySubscriptionsController> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.25),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.workspace_premium_rounded,
-                            color: Colors.white,
-                            size: 24,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: subscription.package.imageUrl.isNotEmpty
+                                ? Image.network(
+                                    subscription.package.imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.workspace_premium_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),

@@ -181,12 +181,21 @@ class PackageInfo {
   });
 
   factory PackageInfo.fromJson(Map<String, dynamic> json) {
+    final rawImage = json['image'] ??
+        json['thumbnail'] ??
+        json['photo'] ??
+        json['coverImage'] ??
+        json['packageImage'] ??
+        json['imageUrl'] ??
+        json['banner'] ??
+        json['icon'];
+
     return PackageInfo(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       types: (json['types'] as List?)?.map((t) => t.toString()).toList() ?? [],
       description: json['description'] ?? '',
-      image: json['image'],
+      image: rawImage?.toString(),
     );
   }
 
@@ -203,8 +212,11 @@ class PackageInfo {
   String get imageUrl {
     final img = (image ?? '').toString().trim();
     if (img.isEmpty) return '';
-    if (img.startsWith('http')) return img;
-    return 'https://lms.eduaitutors.com$img';
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+    if (img.startsWith('/uploads/')) return 'https://lms.eduaitutors.com$img';
+    if (img.startsWith('uploads/')) return 'https://lms.eduaitutors.com/$img';
+    if (img.startsWith('/')) return 'https://lms.eduaitutors.com$img';
+    return 'https://lms.eduaitutors.com/uploads/$img';
   }
 }
 
