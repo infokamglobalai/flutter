@@ -41,16 +41,32 @@ class LiveClassService {
   }
 
   /// Get JWT token to join live class room
-  Future<String?> getLiveClassToken(String id) async {
+  Future<Map<String, dynamic>> getLiveClassToken(String id) async {
     try {
-      final response = await _apiService.post(ApiConstants.liveClassToken(id));
+      final response = await _apiService.get(ApiConstants.liveClassToken(id));
       if (response.data['success'] == true && response.data['data'] != null) {
-        return response.data['data']['token'];
+        return {
+          'success': true,
+          'token': response.data['data']['token'],
+          'data': response.data['data'],
+        };
       }
-      return null;
+      return {
+        'success': false,
+        'message': response.data['message'] ?? 'Could not get access token for this live class.',
+      };
+    } on DioException catch (e) {
+      print('Get live class token dio error: ${e.response?.data}');
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Could not get access token for this live class.',
+      };
     } catch (e) {
       print('Get live class token error: $e');
-      return null;
+      return {
+        'success': false,
+        'message': 'Unexpected error occurred: $e',
+      };
     }
   }
 

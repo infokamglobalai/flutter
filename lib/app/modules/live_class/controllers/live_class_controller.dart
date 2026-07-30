@@ -61,21 +61,21 @@ class LiveClassController extends GetxController {
       barrierDismissible: false,
     );
 
-    final token = await _liveClassService.getLiveClassToken(liveClass.id);
+    final result = await _liveClassService.getLiveClassToken(liveClass.id);
     Get.back(); // Dismiss loading
 
-    if (token != null && token.isNotEmpty) {
+    if (result['success'] == true && result['token'] != null && (result['token'] as String).isNotEmpty) {
       Get.toNamed(
         Routes.LIVE_CLASS_ROOM,
         arguments: {
           'liveClass': liveClass,
-          'token': token,
+          'token': result['token'],
         },
       );
     } else {
       Get.snackbar(
         'Cannot Join',
-        'Could not get access token for this live class.',
+        result['message'] ?? 'Could not get access token for this live class.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
