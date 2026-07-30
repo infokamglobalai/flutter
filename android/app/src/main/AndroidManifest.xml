@@ -62,6 +62,11 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- Disable Impeller on MediaTek Mali GPUs to fix hardware rendering blank screen -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
         
         <activity
             android:name=".MainActivity"
