@@ -23,7 +23,14 @@ class DashboardController extends GetxController {
   final DataService _dataService = DataService();
   final NotificationService _notificationService = NotificationService();
 
-  FCMService get _fcmService => Get.find<FCMService>();
+  // Make FCMService optional — may not be registered if Firebase is not yet initialised
+  FCMService? get _fcmService {
+    try {
+      return Get.find<FCMService>();
+    } catch (_) {
+      return null;
+    }
+  }
 
   // Make AuthController optional for guest mode
   AuthController? get _authController {
@@ -251,14 +258,14 @@ class DashboardController extends GetxController {
   /// Check notification permission status
   Future<void> checkNotificationPermission() async {
     try {
-      final granted = await _fcmService.checkNotificationPermission();
-      notificationPermissionGranted.value = granted;
-
-      if (!granted) {
-        print('⚠️  Notification permission not granted');
+      final fcm = _fcmService;
+      if (fcm == null) {
+        notificationPermissionGranted.value = false;
+        return;
       }
+      final granted = await fcm.checkNotificationPermission();
+      notificationPermissionGranted.value = granted;
     } catch (e) {
-      print('❌ Error checking notification permission: $e');
       notificationPermissionGranted.value = false;
     }
   }
@@ -266,11 +273,12 @@ class DashboardController extends GetxController {
   /// Request notification permission
   Future<bool> requestNotificationPermission() async {
     try {
-      final granted = await _fcmService.requestNotificationPermission();
+      final fcm = _fcmService;
+      if (fcm == null) return false;
+      final granted = await fcm.requestNotificationPermission();
       notificationPermissionGranted.value = granted;
       return granted;
     } catch (e) {
-      print('❌ Error requesting notification permission: $e');
       notificationPermissionGranted.value = false;
       return false;
     }
