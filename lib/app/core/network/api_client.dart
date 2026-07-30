@@ -87,11 +87,17 @@ class ApiClient {
           }
 
           if (statusCode == 401) {
-            // 401 Unauthorized: token is invalid or expired
-            final token = await _storageService.getToken();
-            if (token != null && token.isNotEmpty) {
-              // Only redirect to login if user had a token saved
-              await _handleUnauthorized();
+            final msg = (error.response?.data?['message'] ?? '')
+                .toString()
+                .toLowerCase();
+            if (msg.contains('session has been terminated') ||
+                msg.contains('invalid token') ||
+                msg.contains('token has expired') ||
+                msg.contains('user not found')) {
+              final token = await _storageService.getToken();
+              if (token != null && token.isNotEmpty) {
+                await _handleUnauthorized();
+              }
             }
           }
           return handler.next(error);

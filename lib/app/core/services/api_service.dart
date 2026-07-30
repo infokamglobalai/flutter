@@ -55,24 +55,14 @@ class ApiService {
           options.headers['x-tenant-slug'] = TenantConfig.tenantSlug;
           options.headers['x-tenant-domain'] = TenantConfig.tenantDomain;
 
-          // Use cached token – no async storage read needed
-          final token = _cachedToken;
+          // Resolve token dynamically if in-memory cache was out of sync
+          final token = _cachedToken ?? _storageService.getTokenSync();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
         },
         onError: (error, handler) async {
-          final sc = error.response?.statusCode;
-          if (sc == 401 || sc == 403) {
-            // Clear the in-memory cached token so subsequent requests do not
-            // keep using an expired JWT.  Do NOT wipe persistent storage here
-            // — token refresh / logout is handled properly by ApiClient.
-            // We also treat 403 the same way because many backends (including
-            // the Najah backend) return 403 on mentor/role-protected routes
-            // when the token is expired rather than 401.
-            _cachedToken = null;
-          }
           return handler.next(error);
         },
       ),
