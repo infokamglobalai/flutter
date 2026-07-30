@@ -1,10 +1,15 @@
+import '../config/tenant_config.dart';
+
 class ApiConstants {
-  // Base URL - Update with your actual API endpoint
-  // For Android Emulator: http://10.0.2.2:5000/api
-  // For iOS Simulator: http://localhost:5000/api
-  // For Physical Device: http://YOUR_LOCAL_IP:5000/api (e.g., http://192.168.1.4:5000/api)
-  // static const String baseUrl = 'http://10.0.2.2:5000/api';
-  static const String baseUrl = 'https://lms.eduaitutors.com/api';
+  // Base URL - Single Tenant Setup (kam.eduaitutors.online)
+  static const String baseUrl = TenantConfig.apiBaseUrl;
+
+  // Live Class Endpoints
+  static const String liveClasses = '/live-classes';
+  static String liveClassById(String id) => '/live-classes/$id';
+  static String liveClassToken(String id) => '/live-classes/$id/token';
+  static String liveClassWebUrl(String roomId, String token) =>
+      '${TenantConfig.webBaseUrl}/live/$roomId?token=$token';
 
   // Auth Endpoints
   static const String login = '/auth/login';

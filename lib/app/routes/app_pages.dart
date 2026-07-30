@@ -126,7 +126,9 @@ import 'package:najahapp/app/modules/mocktests/views/student_mocktest_result_ent
 import 'package:najahapp/app/modules/exercises/views/student_exercises_entry_view.dart';
 import 'package:najahapp/app/modules/exercises/views/student_chapter_exercises_entry_view.dart';
 import 'package:najahapp/app/modules/mocktests/views/student_package_mocktests_entry_view.dart';
-import 'package:najahapp/app/modules/learning/views/student_content_test_page_entry_view.dart';
+import 'package:najahapp/app/modules/live_class/views/live_class_list_view.dart';
+import 'package:najahapp/app/modules/live_class/views/live_class_room_view.dart';
+import 'package:najahapp/app/modules/live_class/bindings/live_class_binding.dart';
 
 part 'app_routes.dart';
 
@@ -569,6 +571,17 @@ class AppPages {
       name: _Paths.WATCH_HISTORY,
       page: () => const WatchHistoryView(),
       binding: WatchHistoryBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_CLASSES,
+      page: () => const LiveClassListView(),
+      binding: LiveClassBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: _Paths.LIVE_CLASS_ROOM,
+      page: () => const LiveClassRoomView(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.MY_TICKETS,

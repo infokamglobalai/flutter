@@ -9,6 +9,7 @@ import 'package:najahapp/app/core/theme/app_theme.dart';
 import 'package:najahapp/app/data/models/qna_model.dart';
 import '../controllers/mentor_dashboard_controller.dart';
 import 'package:najahapp/app/modules/support/controllers/ticket_controller.dart';
+import 'package:najahapp/app/data/services/live_class_service.dart';
 import 'mentor_notifications_view.dart';
 import 'mentor_qna_chat_view.dart';
 
@@ -60,9 +61,178 @@ class MentorDashboardView extends GetView<MentorDashboardController> {
               ),
             ],
           ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF6366F1),
+        icon: const Icon(Icons.video_call_rounded, color: Colors.white),
+        label: const Text(
+          'Schedule Class',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        onPressed: () => _showScheduleLiveClassDialog(context),
       ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  void _showScheduleLiveClassDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    DateTime selectedDate = DateTime.now().add(const Duration(hours: 1));
+    int durationMins = 60;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Schedule Live Class 🎥',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Class Title',
+                      hintText: 'e.g. Physics Chapter 3 Doubt Class',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      hintText: 'Key topics to be covered...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today_rounded, color: Color(0xFF6366F1)),
+                    title: Text(
+                      'Date & Time: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year} at ${selectedDate.hour}:${selectedDate.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    trailing: TextButton(
+                      child: const Text('Change'),
+                      onPressed: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 90)),
+                        );
+                        if (d != null) {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(selectedDate),
+                          );
+                          if (t != null) {
+                            setState(() {
+                              selectedDate = DateTime(
+                                  d.year, d.month, d.day, t.hour, t.minute);
+                            });
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6366F1),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (titleController.text.trim().isEmpty) {
+                          Get.snackbar('Error', 'Please enter a class title');
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        Get.dialog(
+                          const Center(child: CircularProgressIndicator()),
+                          barrierDismissible: false,
+                        );
+                        final liveClassService = LiveClassService();
+                        final res = await liveClassService.createLiveClass(
+                          title: titleController.text.trim(),
+                          description: descController.text.trim(),
+                          scheduledAt: selectedDate,
+                          durationMinutes: durationMins,
+                        );
+                        Get.back(); // dismiss loading
+                        if (res['success'] == true) {
+                          Get.snackbar(
+                            'Success 🎉',
+                            'Live class scheduled successfully!',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.green,
+                            colorText: Colors.white,
+                          );
+                        } else {
+                          Get.snackbar(
+                            'Error',
+                            res['message'] ?? 'Failed to schedule live class',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.red,
+                            colorText: Colors.white,
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Schedule Class Now',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

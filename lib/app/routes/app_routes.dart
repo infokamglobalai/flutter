@@ -56,6 +56,8 @@ abstract class Routes {
   static const STUDENT_COACHING = _Paths.STUDENT_COACHING;
   static const WORKSHEETS = _Paths.WORKSHEETS;
   static const WATCH_HISTORY = _Paths.WATCH_HISTORY;
+  static const LIVE_CLASSES = _Paths.LIVE_CLASSES;
+  static const LIVE_CLASS_ROOM = _Paths.LIVE_CLASS_ROOM;
   static const MY_TICKETS = _Paths.MY_TICKETS;
   static const RAISE_TICKET = _Paths.RAISE_TICKET;
   static const PAYMENT_HISTORY = _Paths.PAYMENT_HISTORY;
@@ -168,6 +170,8 @@ abstract class _Paths {
   static const STUDENT_COACHING = '/student-coaching';
   static const WORKSHEETS = '/worksheets';
   static const WATCH_HISTORY = '/watch-history';
+  static const LIVE_CLASSES = '/live-classes';
+  static const LIVE_CLASS_ROOM = '/live-class-room';
   static const MY_TICKETS = '/my-tickets';
   static const RAISE_TICKET = '/raise-ticket';
   static const PAYMENT_HISTORY = '/payment-history';

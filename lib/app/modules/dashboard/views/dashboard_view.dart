@@ -288,6 +288,8 @@ class _DashboardViewState extends State<DashboardView>
       case 0: // Home
         return [
           ...commonSections,
+          _buildLiveClassesQuickBanner(context),
+          const SizedBox(height: 12),
           _buildQuickAccessSection(context),
           const SizedBox(height: 24),
           _buildSubscribedPackages(context),
@@ -517,9 +519,85 @@ class _DashboardViewState extends State<DashboardView>
     if (lt == 'internal') {
       final r = internalRoute.trim();
       if (r.isEmpty) return;
-      Get.toNamed(r, arguments: internalParams);
-      return;
     }
+  }
+
+  Widget _buildLiveClassesQuickBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6366F1).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.video_camera_front_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Live Classes 🔴',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Join interactive sessions with expert tutors',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF6366F1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              elevation: 0,
+            ),
+            onPressed: () => Get.toNamed(Routes.LIVE_CLASSES),
+            child: const Text(
+              'View All',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title) {
@@ -667,7 +745,31 @@ class _DashboardViewState extends State<DashboardView>
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      // Live Class Icon
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: UIUtils.glossyDecoration(
+                          baseColor: Colors.white,
+                          borderRadius: 14,
+                        ).copyWith(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: InkWell(
+                          onTap: () => Get.toNamed(Routes.LIVE_CLASSES),
+                          child: Icon(
+                            Icons.video_camera_front_rounded,
+                            color: Colors.redAccent,
+                            size: isSmallScreen ? 22 : 24,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       // Notification Icon with Badge
                       Stack(
                         children: [
