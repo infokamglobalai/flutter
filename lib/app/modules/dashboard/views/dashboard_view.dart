@@ -151,60 +151,58 @@ class _DashboardViewState extends State<DashboardView>
     return Obx(() {
       final selectedIndex = controller.bottomNavIndex.value;
       return Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         decoration: UIUtils.glossyDecoration(
           baseColor: Colors.white,
-          borderRadius: 30,
+          borderRadius: 24,
           showBorder: true,
         ).copyWith(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: SafeArea(
-              child: SizedBox(
-                height: 70,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      icon: Icons.home_rounded,
-                      label: 'Home',
-                      index: 0,
-                      selectedIndex: selectedIndex,
-                      color: AppTheme.primaryColor,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.school_rounded,
-                      label: 'Learn',
-                      index: 1,
-                      selectedIndex: selectedIndex,
-                      color: AppTheme.primaryColor,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.support_agent_rounded,
-                      label: 'Support',
-                      index: 2,
-                      selectedIndex: selectedIndex,
-                      color: AppTheme.primaryColor,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.analytics_rounded,
-                      label: 'Activity',
-                      index: 3,
-                      selectedIndex: selectedIndex,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ],
-                ),
+            child: SizedBox(
+              height: 54,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    index: 0,
+                    selectedIndex: selectedIndex,
+                    color: AppTheme.primaryColor,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.school_rounded,
+                    label: 'Learn',
+                    index: 1,
+                    selectedIndex: selectedIndex,
+                    color: AppTheme.primaryColor,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.support_agent_rounded,
+                    label: 'Support',
+                    index: 2,
+                    selectedIndex: selectedIndex,
+                    color: AppTheme.primaryColor,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.analytics_rounded,
+                    label: 'Activity',
+                    index: 3,
+                    selectedIndex: selectedIndex,
+                    color: AppTheme.primaryColor,
+                  ),
+                ],
               ),
             ),
           ),
@@ -237,29 +235,29 @@ class _DashboardViewState extends State<DashboardView>
               // Top indicator line
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                height: 4,
-                width: isSelected ? 24 : 0,
+                height: 3,
+                width: isSelected ? 20 : 0,
                 decoration: UIUtils.glossyDecoration(
                   baseColor: color,
                   borderRadius: 2,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               // Icon
               Icon(
                 icon,
                 color: isSelected ? color : const Color(0xFF64748B),
-                size: 24,
+                size: 22,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               // Label
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 9.5,
                   fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                   color: isSelected ? color : const Color(0xFF64748B),
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.4,
                   height: 1,
                 ),
                 textAlign: TextAlign.center,
