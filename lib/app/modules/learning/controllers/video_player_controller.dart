@@ -778,8 +778,14 @@ class VideoPlayerController extends GetxController {
         },
       );
 
-      // Initialize video controller
-      await videoController!.initialize();
+      // Initialize video controller with retry for texture view binding
+      try {
+        await videoController!.initialize();
+      } on PlatformException catch (pe) {
+        print('Initial videoController.initialize PlatformException: $pe — retrying...');
+        await Future.delayed(const Duration(milliseconds: 300));
+        await videoController!.initialize();
+      }
 
       chewieController = ChewieController(
         videoPlayerController: videoController!,

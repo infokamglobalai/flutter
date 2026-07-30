@@ -9,6 +9,10 @@
 -keep class io.flutter.view.**  { *; }
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
+-keep class dev.flutter.pigeon.** { *; }
+-keep class io.flutter.plugins.videoplayer.** { *; }
+-keep class com.google.android.exoplayer2.** { *; }
+-keep class androidx.media3.** { *; }
 
 # PayU SDK
 -keep class com.payu.** { *; }
