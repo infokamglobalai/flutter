@@ -129,6 +129,7 @@ import 'package:najahapp/app/modules/mocktests/views/student_package_mocktests_e
 import 'package:najahapp/app/modules/live_class/views/live_class_list_view.dart';
 import 'package:najahapp/app/modules/live_class/views/live_class_room_view.dart';
 import 'package:najahapp/app/modules/live_class/bindings/live_class_binding.dart';
+import 'package:najahapp/app/modules/learning/views/student_content_test_page_entry_view.dart';
 
 part 'app_routes.dart';
 

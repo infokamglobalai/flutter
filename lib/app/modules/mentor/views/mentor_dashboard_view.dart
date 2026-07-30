@@ -61,6 +61,7 @@ class MentorDashboardView extends GetView<MentorDashboardController> {
               ),
             ],
           ),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF6366F1),
