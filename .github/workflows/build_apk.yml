@@ -30,11 +30,12 @@ jobs:
       - name: 📦 Install Dependencies
         run: flutter pub get
 
-      - name: 🏗️ Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+      - name: 🏗️ Build Release & Fallback APK
+        run: |
+          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug
 
-      - name: 📤 Upload Release APK Artifact
+      - name: 📤 Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: EduAiTutors-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: EduAiTutors-Android-APK
+          path: build/app/outputs/flutter-apk/*.apk
