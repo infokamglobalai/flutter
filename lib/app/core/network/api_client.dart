@@ -78,26 +78,11 @@ class ApiClient {
             return handler.next(error);
           }
 
-          if (statusCode == 401 || statusCode == 403) {
-            // For other endpoints, try to refresh token.
-            // NOTE: Some backends (e.g. Express with role middleware) return
-            // 403 for expired tokens on protected routes instead of 401, so
-            // we treat both the same way here.
-            final refreshed = await _refreshToken();
-            if (refreshed) {
-              // Retry the request with the new token
-              final options = error.requestOptions;
-              final token = await _storageService.getToken();
-              options.headers['Authorization'] = 'Bearer $token';
-
-              try {
-                final response = await _dio.fetch(options);
-                return handler.resolve(response);
-              } catch (e) {
-                return handler.next(error);
-              }
-            } else {
-              // Refresh failed — force logout
+          if (statusCode == 401) {
+            // 401 Unauthorized: token is invalid or expired
+            final token = await _storageService.getToken();
+            if (token != null && token.isNotEmpty) {
+              // Only redirect to login if user had a token saved
               await _handleUnauthorized();
             }
           }
@@ -131,7 +116,9 @@ class ApiClient {
 
   Future<void> _handleUnauthorized() async {
     await _storageService.clearAuth();
-    Get.offAllNamed(Routes.LOGIN);
+    if (Get.currentRoute != Routes.LOGIN) {
+      Get.offAllNamed(Routes.LOGIN);
+    }
   }
 
   // GET Request
