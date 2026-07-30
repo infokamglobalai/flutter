@@ -577,12 +577,10 @@ class AppPages {
       name: _Paths.LIVE_CLASSES,
       page: () => const LiveClassListView(),
       binding: LiveClassBinding(),
-      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.LIVE_CLASS_ROOM,
       page: () => const LiveClassRoomView(),
-      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: _Paths.MY_TICKETS,
