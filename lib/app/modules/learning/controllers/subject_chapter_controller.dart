@@ -6,11 +6,17 @@ import '../../../data/services/data_service.dart';
 import '../../../routes/app_pages.dart';
 
 class SubjectChapterController extends GetxController {
+  final DataService _dataService = Get.find<DataService>();
+
   // Subscription data passed from dashboard
   final subscription = Rxn<SubscriptionModel>();
 
   // Selected subject for filtering
   final selectedSubject = RxnString();
+
+  // Content availability cache per chapterId
+  final chapterContentCounts = <String, int>{}.obs;
+  final checkedChapterIds = <String>{}.obs;
 
   @override
   void onInit() {
@@ -18,7 +24,31 @@ class SubjectChapterController extends GetxController {
     // Get subscription data from navigation arguments
     if (Get.arguments != null) {
       subscription.value = Get.arguments as SubscriptionModel;
+      _preloadChapterContents();
     }
+  }
+
+  Future<void> _preloadChapterContents() async {
+    final sub = subscription.value;
+    if (sub == null) return;
+    for (final ch in sub.chapters) {
+      final chId = ch.id;
+      if (chId.isNotEmpty && !checkedChapterIds.contains(chId)) {
+        try {
+          final contents = await _dataService.fetchChapterContents(chId);
+          chapterContentCounts[chId] = contents.length;
+          checkedChapterIds.add(chId);
+        } catch (_) {
+          chapterContentCounts[chId] = 0;
+          checkedChapterIds.add(chId);
+        }
+      }
+    }
+  }
+
+  bool hasContent(String chapterId) {
+    if (!checkedChapterIds.contains(chapterId)) return true;
+    return (chapterContentCounts[chapterId] ?? 0) > 0;
   }
 
   void selectSubject(String? subject) {
@@ -239,9 +269,19 @@ class SubjectChapterController extends GetxController {
   }
 
   void navigateToVideoPlayer(Map<String, dynamic> chapter, String subject) {
-    // Kick off prefetch BEFORE navigating so data arrives during/before
-    // the route transition. Uses the singleton DataService cache.
     final chapterId = (chapter['_id'] ?? chapter['chapterId'] ?? '').toString();
+    if (chapterId.isNotEmpty && !hasContent(chapterId)) {
+      Get.snackbar(
+        'No Content Available',
+        'This chapter does not have any learning content yet.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.primary,
+        colorText: Get.theme.colorScheme.onPrimary,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
     if (chapterId.isNotEmpty) {
       Get.find<DataService>().prefetchChapterData(chapterId);
     }

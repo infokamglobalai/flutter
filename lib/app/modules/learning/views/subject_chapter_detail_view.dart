@@ -546,95 +546,132 @@ class SubjectChapterDetailView extends GetView<SubjectChapterController> {
 
     final progress = chapter['progress'] as double? ?? 0.0;
     final isCompleted = chapter['completed'] as bool? ?? false;
+    final chapterId = chapter['chapterId']?.toString() ?? '';
 
-    return InkWell(
-      onTap: () => controller.navigateToVideoPlayer(chapter, subject),
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
-        padding: EdgeInsets.all(cardPadding),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(color: color.withOpacity(0.15), width: 1),
-        ),
-        child: Row(
-          children: [
-            // Chapter number badge
-            Container(
-              width: badgeSize,
-              height: badgeSize,
-              decoration: BoxDecoration(
-                color: isCompleted ? color.withOpacity(0.15) : Colors.grey[200],
-                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+    return Obx(() {
+      final isAvailable = controller.hasContent(chapterId);
+
+      return InkWell(
+        onTap: isAvailable
+            ? () => controller.navigateToVideoPlayer(chapter, subject)
+            : () {
+                Get.snackbar(
+                  'No Content Available',
+                  'This chapter does not have any videos or learning materials yet.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.orange[800],
+                  colorText: Colors.white,
+                  duration: const Duration(seconds: 2),
+                );
+              },
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Container(
+          margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+          padding: EdgeInsets.all(cardPadding),
+          decoration: BoxDecoration(
+            color: isAvailable ? Colors.grey[50] : Colors.grey[100],
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: isAvailable ? color.withOpacity(0.15) : Colors.grey[300]!,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Chapter number badge
+              Container(
+                width: badgeSize,
+                height: badgeSize,
+                decoration: BoxDecoration(
+                  color: !isAvailable
+                      ? Colors.grey[200]
+                      : (isCompleted ? color.withOpacity(0.15) : Colors.grey[200]),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                ),
+                child: Center(
+                  child: !isAvailable
+                      ? Icon(
+                          Icons.lock_outline_rounded,
+                          color: Colors.grey[400],
+                          size: badgeIconSize,
+                        )
+                      : (isCompleted
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: color,
+                              size: badgeIconSize,
+                            )
+                          : Text(
+                              '${chapter['id']}',
+                              style: TextStyle(
+                                fontSize: badgeFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[600],
+                              ),
+                            )),
+                ),
               ),
-              child: Center(
-                child: isCompleted
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        color: color,
-                        size: badgeIconSize,
-                      )
-                    : Text(
-                        '${chapter['id']}',
-                        style: TextStyle(
-                          fontSize: badgeFontSize,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[600],
+              SizedBox(width: isSmallScreen ? 12 : 14),
+              // Chapter info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chapter['title'] as String,
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: isAvailable
+                            ? const Color(0xFF1F2937)
+                            : Colors.grey[500],
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 5 : 6),
+                    Text(
+                      !isAvailable
+                          ? 'No Content Available'
+                          : (isCompleted ? 'Completed' : 'Tap to start'),
+                      style: TextStyle(
+                        fontSize: metaFontSize,
+                        color: !isAvailable
+                            ? Colors.orange[800]
+                            : Colors.grey[600],
+                        fontWeight: !isAvailable
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    if (isAvailable && progress > 0 && progress < 1) ...[
+                      SizedBox(height: isSmallScreen ? 6 : 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          isSmallScreen ? 3 : 4,
+                        ),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: isSmallScreen ? 3 : 4,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
                         ),
                       ),
-              ),
-            ),
-            SizedBox(width: isSmallScreen ? 12 : 14),
-            // Chapter info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    chapter['title'] as String,
-                    style: TextStyle(
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 5 : 6),
-                  Text(
-                    isCompleted ? 'Completed' : 'Tap to start',
-                    style: TextStyle(
-                      fontSize: metaFontSize,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (progress > 0 && progress < 1) ...[
-                    SizedBox(height: isSmallScreen ? 6 : 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        isSmallScreen ? 3 : 4,
-                      ),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: isSmallScreen ? 3 : 4,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                      ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            SizedBox(width: isSmallScreen ? 6 : 8),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: arrowSize,
-              color: color,
-            ),
-          ],
+              SizedBox(width: isSmallScreen ? 6 : 8),
+              Icon(
+                !isAvailable
+                    ? Icons.lock_outline_rounded
+                    : Icons.arrow_forward_ios_rounded,
+                size: arrowSize,
+                color: !isAvailable ? Colors.grey[400] : color,
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildPackageMocktestsButton(BuildContext context) {
