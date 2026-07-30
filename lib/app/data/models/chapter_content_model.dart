@@ -51,7 +51,10 @@ class ChapterContentModel {
       title: json['title'] ?? '',
       videoType: json['videoType'] ?? 'youtube',
       videoUrl: json['videoUrl'] ?? '',
-      uploadedVideoPath: json['uploadedVideoPath'] ?? '',
+      uploadedVideoPath: (json['uploadedVideoUrl'] != null &&
+              json['uploadedVideoUrl'].toString().trim().isNotEmpty)
+          ? json['uploadedVideoUrl'].toString().trim()
+          : (json['uploadedVideoPath'] ?? ''),
       overview: json['overview'] ?? '',
       resources:
           (json['resources'] as List<dynamic>?)
