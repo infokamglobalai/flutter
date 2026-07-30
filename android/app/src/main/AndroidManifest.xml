@@ -50,6 +50,18 @@
             android:authorities="${applicationId}.flutterdownloader.flutter_downloader_init"
             android:exported="false"
             tools:ignore="Instantiatable" />
+
+        <!-- Disable default WorkManagerInitializer to prevent double-initialization crash -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
         
         <activity
             android:name=".MainActivity"
