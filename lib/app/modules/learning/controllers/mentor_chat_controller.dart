@@ -9,7 +9,7 @@ import '../../../core/services/api_service.dart';
 
 class MentorChatController extends GetxController {
   final QnaService _qnaService = QnaService();
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
   final DoubtService _doubtService = DoubtService();
 
   final threads = <QnaThread>[].obs;

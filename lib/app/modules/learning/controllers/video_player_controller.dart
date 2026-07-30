@@ -552,12 +552,20 @@ class VideoPlayerController extends GetxController {
       print('Content videoUrl: ${content.videoUrl}');
       print('Content uploadedVideoPath: ${content.uploadedVideoPath}');
 
-      // Check if it's a YouTube video
-      if (content.videoType.toLowerCase() == 'youtube' &&
-          content.videoUrl.isNotEmpty) {
-        await _initializeYoutubeVideo(content.videoUrl);
-      } else if (content.uploadedVideoPath.isNotEmpty) {
-        await _initializeUploadedVideo(content.uploadedVideoPath);
+      final vUrl = content.videoUrl.trim();
+      final uPath = content.uploadedVideoPath.trim();
+      final vType = content.videoType.toLowerCase().trim();
+
+      final isYoutube = vType == 'youtube' ||
+          vUrl.contains('youtube.com') ||
+          vUrl.contains('youtu.be');
+
+      if (isYoutube && vUrl.isNotEmpty) {
+        await _initializeYoutubeVideo(vUrl);
+      } else if (uPath.isNotEmpty) {
+        await _initializeUploadedVideo(uPath);
+      } else if (vUrl.isNotEmpty) {
+        await _initializeUploadedVideo(vUrl);
       } else {
         throw Exception('No video URL available');
       }

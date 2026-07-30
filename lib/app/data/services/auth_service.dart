@@ -3,8 +3,10 @@ import 'package:get_storage/get_storage.dart';
 import '../../core/services/api_service.dart';
 import '../models/user_model.dart';
 
+import 'package:get/get.dart';
+
 class AuthService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
   final _storage = GetStorage();
 
   // Login

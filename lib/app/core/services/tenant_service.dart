@@ -5,7 +5,7 @@ import '../config/tenant_config.dart';
 import 'api_service.dart';
 
 class TenantService extends GetxService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
 
   final tenantName = TenantConfig.tenantName.obs;
   final logoUrl = ''.obs;

@@ -44,7 +44,7 @@ class StudentProfileView extends GetView<DashboardController> {
         final profile = controller.studentProfile.value;
         final user = controller.user.value;
 
-        if (profile == null) {
+        if (user == null && profile == null) {
           return _buildLoadingOrError();
         }
 
