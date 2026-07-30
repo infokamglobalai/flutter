@@ -252,19 +252,22 @@ class FCMService extends GetxService {
 
   /// Show permission denied message
   void _showPermissionDeniedMessage() {
-    Get.snackbar(
-      'Notifications Disabled',
-      'Please enable notifications in your device settings to receive updates',
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 5),
-      mainButton: TextButton(
-        onPressed: () => openAppSettings(),
-        child: const Text(
-          'Open Settings',
-          style: TextStyle(color: Colors.white),
+    if (Get.context == null) return;
+    try {
+      Get.snackbar(
+        'Notifications Disabled',
+        'Please enable notifications in your device settings to receive updates',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 5),
+        mainButton: TextButton(
+          onPressed: () => openAppSettings(),
+          child: const Text(
+            'Open Settings',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {}
   }
 
   /// Get FCM token and save it

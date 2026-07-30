@@ -8,6 +8,7 @@ class ConnectivityService extends GetxService {
   StreamSubscription<dynamic>? _subscription;
   
   final isConnected = true.obs;
+  bool _isInitialCheckDone = false;
 
   @override
   void onInit() {
@@ -25,13 +26,14 @@ class ConnectivityService extends GetxService {
   Future<void> _checkInitialConnectivity() async {
     try {
       final result = await _connectivity.checkConnectivity();
-      _updateConnectionStatus(result);
+      _updateConnectionStatus(result, isInitial: true);
     } catch (e) {
       debugPrint('Connectivity Error: $e');
+      _isInitialCheckDone = true;
     }
   }
 
-  void _updateConnectionStatus(dynamic result) {
+  void _updateConnectionStatus(dynamic result, {bool isInitial = false}) {
     bool hasConnection;
     try {
       if (result is List) {
@@ -42,14 +44,17 @@ class ConnectivityService extends GetxService {
     } catch (_) {
       hasConnection = true; // default to connected on error
     }
-    
-    if (isConnected.value && !hasConnection) {
-      _showNoInternetSnackbar();
-    } else if (!isConnected.value && hasConnection) {
-      _showBackOnlineSnackbar();
+
+    if (!isInitial && _isInitialCheckDone && Get.context != null) {
+      if (isConnected.value && !hasConnection) {
+        _showNoInternetSnackbar();
+      } else if (!isConnected.value && hasConnection) {
+        _showBackOnlineSnackbar();
+      }
     }
     
     isConnected.value = hasConnection;
+    _isInitialCheckDone = true;
   }
 
   void _showNoInternetSnackbar() {
