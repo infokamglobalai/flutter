@@ -128,7 +128,7 @@ class StudentProfileView extends GetView<DashboardController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      profile.fullName ?? 'Student',
+                      profile?.fullName ?? user?.name ?? 'Student',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -177,15 +177,16 @@ class StudentProfileView extends GetView<DashboardController> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            _buildDetailRow('User ID', profile.userId ?? 'N/A'),
-                            _buildDetailRow('Board', profile.board ?? 'N/A'),
-                            _buildDetailRow('Grade', profile.grade ?? 'N/A'),
-                            if (profile.phone != null && profile.phone!.isNotEmpty)
-                              _buildDetailRow('Phone', profile.phone!),
-                            if (profile.city != null && profile.city!.isNotEmpty)
-                              _buildDetailRow('City', profile.city!),
-                            if (profile.state != null && profile.state!.isNotEmpty)
-                              _buildDetailRow('State', profile.state!),
+                            _buildDetailRow('User ID', profile?.userId ?? user?.id ?? 'N/A'),
+                            _buildDetailRow('Email', user?.email ?? 'N/A'),
+                            _buildDetailRow('Board', profile?.board ?? 'N/A'),
+                            _buildDetailRow('Grade', profile?.grade ?? 'N/A'),
+                            if ((profile?.phone ?? user?.phone ?? '').isNotEmpty)
+                              _buildDetailRow('Phone', profile?.phone ?? user?.phone ?? ''),
+                            if ((profile?.city ?? '').isNotEmpty)
+                              _buildDetailRow('City', profile?.city ?? ''),
+                            if ((profile?.state ?? '').isNotEmpty)
+                              _buildDetailRow('State', profile?.state ?? ''),
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,

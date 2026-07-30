@@ -6,7 +6,7 @@ import '../models/live_class_model.dart';
 import 'package:get/get.dart';
 
 class LiveClassService {
-  final ApiService _apiService = Get.find<ApiService>();
+  ApiService get _apiService => Get.find<ApiService>();
 
   /// Fetch all live classes for student / user
   Future<List<LiveClassModel>> fetchLiveClasses() async {

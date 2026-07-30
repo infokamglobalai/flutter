@@ -5,7 +5,12 @@ import '../../../data/services/live_class_service.dart';
 import '../../../routes/app_pages.dart';
 
 class LiveClassController extends GetxController {
-  final LiveClassService _liveClassService = LiveClassService();
+  LiveClassService get _liveClassService {
+    if (!Get.isRegistered<LiveClassService>()) {
+      Get.put(LiveClassService());
+    }
+    return Get.find<LiveClassService>();
+  }
 
   final isLoading = false.obs;
   final liveClasses = <LiveClassModel>[].obs;
