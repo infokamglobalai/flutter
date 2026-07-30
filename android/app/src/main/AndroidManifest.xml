@@ -43,6 +43,13 @@
                 <meta-data
                     android:name="com.google.firebase.messaging.default_notification_icon"
                     android:resource="@mipmap/ic_launcher" />
+
+        <!-- Flutter Downloader Provider -->
+        <provider
+            android:name="vn.hunghd.flutterdownloader.FlutterDownloaderInitializer"
+            android:authorities="${applicationId}.flutterdownloader.flutter_downloader_init"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
         
         <activity
             android:name=".MainActivity"

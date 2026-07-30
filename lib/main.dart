@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -33,6 +34,12 @@ void main() {
         );
       } catch (e) {
         debugPrint('Firebase initialization error: $e');
+      }
+
+      try {
+        await FlutterDownloader.initialize(debug: false, ignoreSsl: true);
+      } catch (e) {
+        debugPrint('FlutterDownloader initialization error: $e');
       }
     }
 
