@@ -8,8 +8,19 @@ import 'package:najahapp/app/data/repositories/auth_repository.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 
 class AuthController extends GetxController {
-  final AuthRepository _authRepository = Get.find<AuthRepository>();
-  final StorageService _storageService = Get.find<StorageService>();
+  AuthRepository get _authRepository {
+    if (!Get.isRegistered<AuthRepository>()) {
+      Get.put(AuthRepository());
+    }
+    return Get.find<AuthRepository>();
+  }
+
+  StorageService get _storageService {
+    if (!Get.isRegistered<StorageService>()) {
+      Get.put(StorageService());
+    }
+    return Get.find<StorageService>();
+  }
 
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
   final RxBool isLoading = false.obs;

@@ -30,7 +30,16 @@ class InitialBinding extends Bindings {
     Get.put(ConnectivityService(), permanent: true);
     Get.put(ApiClient(), permanent: true);
     Get.put(ApiService(), permanent: true);
-    Get.put(AuthController(), permanent: true);
+    // Repositories
+    Get.put(AuthRepository(), permanent: true);
+    Get.lazyPut<ContentHierarchyRepository>(
+      () => ContentHierarchyRepository(),
+      fenix: true,
+    );
+    Get.lazyPut<SubscriptionRepository>(
+      () => SubscriptionRepository(),
+      fenix: true,
+    );
 
     // Singleton DataService – shares the ApiService connection pool
     Get.put(DataService(), permanent: true);
@@ -44,22 +53,11 @@ class InitialBinding extends Bindings {
     Get.put(BrainGamesStorageService(), permanent: true);
 
     // Initialize FCM Service (will auto-start in onInit)
-    // Only register when Firebase has been initialized.
-    // This keeps widget tests (which don't run main()) from crashing.
     final hasFirebaseApp = Firebase.apps.isNotEmpty;
     if (hasFirebaseApp) {
       Get.put(FCMService(), permanent: true);
     }
 
-    // Repositories
-    Get.lazyPut<AuthRepository>(() => AuthRepository(), fenix: true);
-    Get.lazyPut<ContentHierarchyRepository>(
-      () => ContentHierarchyRepository(),
-      fenix: true,
-    );
-    Get.lazyPut<SubscriptionRepository>(
-      () => SubscriptionRepository(),
-      fenix: true,
-    );
+    Get.put(AuthController(), permanent: true);
   }
 }
