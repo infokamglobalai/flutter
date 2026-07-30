@@ -742,49 +742,47 @@ class VideoPlayerController extends GetxController {
 
   Future<void> _initializeUploadedVideo(String videoPath) async {
     try {
-      // Clean up path
-      String cleanPath = videoPath;
-      if (cleanPath.startsWith('/')) {
-        cleanPath = cleanPath.substring(1);
+      final rawPath = videoPath.trim();
+      if (rawPath.isEmpty) {
+        throw Exception('Video URL or path is empty');
       }
 
-      final baseUrl = ApiConstants.baseUrl.replaceAll('/api', '');
-      final videoUrl = videoPath.startsWith('http') 
-          ? videoPath 
-          : '$baseUrl/$cleanPath';
-      print('Initializing uploaded video: $videoUrl');
+      String videoUrl;
+      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+        videoUrl = rawPath;
+      } else if (rawPath.startsWith('//')) {
+        videoUrl = 'https:$rawPath';
+      } else {
+        final cleanPath = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
+        final baseUrl = ApiConstants.baseUrl.replaceAll('/api', '');
+        videoUrl = '$baseUrl/$cleanPath';
+      }
+
+      print('Initializing video URL (R2/S3/Upload): $videoUrl');
       videoErrorMessage.value = '';
 
-      // Emulator workaround: goldfish MediaCodec can crash the emulator when
-      // trying to decode some H.264 MP4 files (device disconnect). Avoid
-      // embedded playback and offer external open instead.
-      if (isEmulator.value) {
-        isYoutubeVideo.value = false;
-        isVideoInitialized.value = false;
-        videoErrorMessage.value =
-            'Video playback is not supported on Android emulator. Please use a real device or open the video externally.';
-        return;
-      }
+      // Safely encode special characters & spaces in URL
+      final encodedUrl = Uri.encodeFull(videoUrl);
+      final uri = Uri.tryParse(encodedUrl) ?? Uri.parse(videoUrl);
 
-      // Validate URL
-      final uri = Uri.tryParse(videoUrl);
-      if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) {
-        throw Exception('Invalid video URL format: $videoUrl');
-      }
+      // Clean up previous video controllers safely
+      videoController?.dispose();
+      chewieController?.dispose();
 
       videoController = vp.VideoPlayerController.networkUrl(
         uri,
         httpHeaders: const {
-          'Accept': 'video/*,*/*',
-          'Connection': 'keep-alive',
+          'Accept': '*/*',
+          'User-Agent':
+              'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
         },
       );
 
-      // Initialize Chewie with autoInitialize so we don't block the UI thread
-      // or trigger emulator MediaCodec crashes on initialize().
+      // Initialize video controller
+      await videoController!.initialize();
+
       chewieController = ChewieController(
         videoPlayerController: videoController!,
-        autoInitialize: true,
         autoPlay: false,
         looping: false,
         allowFullScreen: !isPremiere.value,
@@ -825,18 +823,17 @@ class VideoPlayerController extends GetxController {
         },
       );
 
-      // Listener updates play state & duration once buffering starts
       videoController!.addListener(_videoListener);
 
-      // Show player widget immediately – Chewie handles its own loading state
       isYoutubeVideo.value = false;
       isVideoInitialized.value = true;
       videoErrorMessage.value = '';
 
-      print('Uploaded video controller ready (buffering in background)');
+      print('Direct video (R2/S3/Upload) initialized successfully');
     } catch (e) {
-      print('Error initializing uploaded video: $e');
+      print('Error initializing direct video (R2/S3/Upload): $e');
       videoErrorMessage.value = e.toString();
+      isVideoInitialized.value = false;
       rethrow;
     }
   }
