@@ -40,17 +40,39 @@ class _SplashViewState extends State<SplashView>
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(seconds: 2));
+    // Wait for splash animation + ensure all bindings are initialized
+    await Future.delayed(const Duration(seconds: 3));
+
+    // Wait until the navigator context is ready
+    int retries = 0;
+    while (Get.context == null && retries < 10) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      retries++;
+    }
+
+    // If widget was disposed before navigation (unlikely but safe), bail out
+    if (!mounted) return;
 
     try {
-      final storageService = Get.find<StorageService>();
+      StorageService storageService;
+      try {
+        storageService = Get.find<StorageService>();
+      } catch (_) {
+        // If StorageService not yet registered, go to login
+        Get.offAllNamed(Routes.LOGIN);
+        return;
+      }
 
       // Check if onboarding is completed
-      final onboardingCompleted = storageService.isOnboardingCompleted();
+      bool onboardingCompleted = false;
+      try {
+        onboardingCompleted = storageService.isOnboardingCompleted();
+      } catch (_) {
+        onboardingCompleted = false;
+      }
 
       if (!onboardingCompleted) {
-        // First time user, show onboarding
-        Get.offAllNamed('/onboarding');
+        Get.offAllNamed(Routes.ONBOARDING);
         return;
       }
 
@@ -58,14 +80,11 @@ class _SplashViewState extends State<SplashView>
       final token = storageService.getString(AppConstants.storageKeyToken);
 
       if (token != null && token.isNotEmpty) {
-        // User is logged in, check their role and redirect accordingly
         final userData = storageService.getUserData();
         final userRole = userData?['role'] as String?;
 
         if (userRole != null) {
-          // Convert role to lowercase for case-insensitive comparison
           final role = userRole.toLowerCase();
-
           if (role == 'parent') {
             Get.offAllNamed(Routes.PARENT_DASHBOARD);
             return;
@@ -74,18 +93,17 @@ class _SplashViewState extends State<SplashView>
             Get.offAllNamed(Routes.DASHBOARD);
             return;
           }
-          // Mobile app supports only Student + Parent panels.
-          Get.offAllNamed(Routes.LOGIN);
-        } else {
-          // No role found, default to student dashboard
-          Get.offAllNamed(Routes.DASHBOARD);
         }
+        // Unknown role or no role, go to dashboard as student
+        Get.offAllNamed(Routes.DASHBOARD);
       } else {
         Get.offAllNamed(Routes.LOGIN);
       }
     } catch (e) {
-      // Fallback to login if there's an error
-      Get.offAllNamed(Routes.LOGIN);
+      // Ultimate fallback — always navigate away from splash
+      if (mounted) {
+        Get.offAllNamed(Routes.LOGIN);
+      }
     }
   }
 
