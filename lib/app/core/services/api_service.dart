@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:najahapp/app/core/constants/api_constants.dart';
 import 'package:najahapp/app/core/services/storage_service.dart';
 
+import 'package:najahapp/app/core/config/tenant_config.dart';
+
 class ApiService {
   late final dio.Dio _dio;
   final StorageService _storageService = Get.find<StorageService>();
@@ -24,6 +26,8 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'x-tenant-slug': TenantConfig.tenantSlug,
+          'x-tenant-domain': TenantConfig.tenantDomain,
         },
       ),
     );
@@ -47,6 +51,10 @@ class ApiService {
     _dio.interceptors.add(
       dio.InterceptorsWrapper(
         onRequest: (options, handler) {
+          // Always set tenant headers
+          options.headers['x-tenant-slug'] = TenantConfig.tenantSlug;
+          options.headers['x-tenant-domain'] = TenantConfig.tenantDomain;
+
           // Use cached token – no async storage read needed
           final token = _cachedToken;
           if (token != null && token.isNotEmpty) {

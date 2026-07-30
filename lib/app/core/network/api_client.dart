@@ -6,6 +6,8 @@ import 'package:najahapp/app/core/constants/app_constants.dart';
 import 'package:najahapp/app/core/services/storage_service.dart';
 import 'package:najahapp/app/routes/app_pages.dart';
 
+import 'package:najahapp/app/core/config/tenant_config.dart';
+
 class ApiClient {
   late Dio _dio;
   final StorageService _storageService = Get.find<StorageService>();
@@ -20,6 +22,8 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'x-tenant-slug': TenantConfig.tenantSlug,
+          'x-tenant-domain': TenantConfig.tenantDomain,
         },
       ),
     );
@@ -41,9 +45,13 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Always ensure tenant headers are present
+          options.headers['x-tenant-slug'] = TenantConfig.tenantSlug;
+          options.headers['x-tenant-domain'] = TenantConfig.tenantDomain;
+
           // Add auth token to requests
           final token = await _storageService.getToken();
-          if (token != null) {
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
