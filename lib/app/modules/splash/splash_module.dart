@@ -49,24 +49,19 @@ class _SplashViewState extends State<SplashView>
 
     try {
       final storageService = Get.find<StorageService>();
-      final onboardingCompleted = storageService.isOnboardingCompleted();
+      final token = storageService.getString(AppConstants.storageKeyToken);
 
-      if (!onboardingCompleted) {
-        targetRoute = Routes.ONBOARDING;
-      } else {
-        final token = storageService.getString(AppConstants.storageKeyToken);
-        if (token != null && token.isNotEmpty) {
-          final userData = storageService.getUserData();
-          final userRole = userData?['role']?.toString().toLowerCase();
+      if (token != null && token.isNotEmpty) {
+        final userData = storageService.getUserData();
+        final userRole = userData?['role']?.toString().toLowerCase();
 
-          if (userRole == 'parent') {
-            targetRoute = Routes.PARENT_DASHBOARD;
-          } else {
-            targetRoute = Routes.DASHBOARD;
-          }
+        if (userRole == 'parent') {
+          targetRoute = Routes.PARENT_DASHBOARD;
         } else {
-          targetRoute = Routes.LOGIN;
+          targetRoute = Routes.DASHBOARD;
         }
+      } else {
+        targetRoute = Routes.LOGIN;
       }
     } catch (e) {
       debugPrint('Splash navigation error: $e');

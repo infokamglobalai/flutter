@@ -41,7 +41,7 @@ class _LoginViewState extends State<LoginView> {
             decoration: UIUtils.meshGradientDecoration(
               colors: [
                 AppTheme.primaryColor,
-                AppTheme.primaryColor.withValues(alpha: 0.9),
+                AppTheme.primaryColor.withOpacity(0.9),
                 const Color(0xFF1E293B),
                 const Color(0xFF0F172A),
               ],
