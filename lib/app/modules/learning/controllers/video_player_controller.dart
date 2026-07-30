@@ -541,6 +541,30 @@ class VideoPlayerController extends GetxController {
     return 'notes';
   }
 
+  String? _extractYoutubeId(String rawUrl) {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return null;
+
+    // Check if it's already a raw 11-character YouTube ID
+    if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(url)) {
+      return url;
+    }
+
+    final id = YoutubePlayer.convertUrlToId(url);
+    if (id != null && id.isNotEmpty) return id;
+
+    // Regex for embed, shorts, watch?v=, watch?.+&v=, youtu.be
+    final regExp = RegExp(
+      r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(url);
+    if (match != null && match.groupCount >= 1) {
+      return match.group(1);
+    }
+    return null;
+  }
+
   Future<void> _initializeVideoFromContent(ChapterContentModel content) async {
     // Don't set isLoading here – the page is already visible at this point.
     // isVideoInitialized drives the loading indicator inside the video widget.
@@ -554,27 +578,26 @@ class VideoPlayerController extends GetxController {
 
       final vUrl = content.videoUrl.trim();
       final uPath = content.uploadedVideoPath.trim();
-      final vType = content.videoType.toLowerCase().trim();
 
-      final isYoutube = vType == 'youtube' ||
-          vUrl.contains('youtube.com') ||
-          vUrl.contains('youtu.be');
+      // Extract YouTube ID if present in either URL or path
+      final ytIdFromUrl = _extractYoutubeId(vUrl);
+      final ytIdFromPath = _extractYoutubeId(uPath);
+      final ytId = ytIdFromUrl ?? ytIdFromPath;
 
-      if (isYoutube && vUrl.isNotEmpty) {
-        await _initializeYoutubeVideo(vUrl);
+      if (ytId != null && ytId.isNotEmpty) {
+        await _initializeYoutubeVideoWithId(ytId);
       } else if (uPath.isNotEmpty) {
         await _initializeUploadedVideo(uPath);
       } else if (vUrl.isNotEmpty) {
         await _initializeUploadedVideo(vUrl);
       } else {
-        throw Exception('No video URL available');
+        throw Exception('No valid video URL available for this content.');
       }
 
     } on PlatformException catch (e) {
       isVideoInitialized.value = false;
       videoErrorMessage.value = e.message ?? 'Platform error';
       print('Platform Exception: ${e.code} - ${e.message}');
-      print('Platform Exception Details: $e');
       Get.snackbar(
         'Video Error',
         'Platform error: ${e.message ?? "Unable to load video"}',
@@ -615,23 +638,12 @@ class VideoPlayerController extends GetxController {
     _startPositionListener();
   }
 
-  Future<void> _initializeYoutubeVideo(String youtubeUrl) async {
+  Future<void> _initializeYoutubeVideoWithId(String videoId) async {
     try {
-      print('Initializing YouTube video: $youtubeUrl');
+      print('Initializing YouTube video with ID: $videoId');
       videoErrorMessage.value = '';
 
-      // Extract video ID from URL
-      final videoId = YoutubePlayer.convertUrlToId(youtubeUrl);
-      if (videoId == null) {
-        throw Exception('Invalid YouTube URL: $youtubeUrl');
-      }
-
-      print('YouTube video ID: $videoId');
-
-      // Use the embedded YouTube player directly – it is faster than going
-      // through youtube_explode_dart (which requires an extra round-trip to
-      // YouTube's API before we can even start buffering).
-      // Initialize YouTube embedded controller
+      youtubeController?.dispose();
       youtubeController = YoutubePlayerController(
         initialVideoId: videoId,
         flags: YoutubePlayerFlags(
@@ -657,7 +669,7 @@ class VideoPlayerController extends GetxController {
 
       isYoutubeVideo.value = true;
       isVideoInitialized.value = true;
-      print('YouTube video initialized successfully');
+      print('YouTube video initialized successfully: $videoId');
     } catch (e) {
       print('Error initializing YouTube video: $e');
       videoErrorMessage.value = e.toString();
